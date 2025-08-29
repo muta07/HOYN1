@@ -1,6 +1,6 @@
 // src/app/layout.tsx
-import Navbar from '@/components/Navbar';
-import '@/styles/globals.css'; // ✅ Düzeltildi: '@/ ile doğru import
+import Navbar from '@/components/Navbar'; // 
+import '@/styles/globals.css';
 
 export default function RootLayout({
   children,
