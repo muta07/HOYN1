@@ -4,46 +4,33 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-const QRCode = require('qrcode.react').default;
-import { User } from 'firebase/auth';
-import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
+import QRCodeWrapper from '@/components/qr/QRCodeWrapper';
 
 export default function QRGeneratorPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const qrRef = useRef<HTMLDivElement>(null);
 
-  // QR Ayarları
-  const [value, setValue] = useState(user?.email ? `hoyn.app/u/${user.email.split('@')[0]}` : 'hoyn.app');
+  const [value, setValue] = useState('hoyn.app/u/kullanici');
   const [size, setSize] = useState(256);
   const [bgColor, setBgColor] = useState('#000000');
-  const [fgColor, setFgColor] = useState('#E040FB'); // Neon Mor
+  const [fgColor, setFgColor] = useState('#E040FB');
 
-  // Kullanıcı girişi kontrolü
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
-    }
-  }, [user, authLoading, router]);
-
-  if (authLoading) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Yükleniyor...
-      </div>
-    );
+  if (authLoading) return <div>Yükleniyor...</div>;
+  if (!user) {
+    router.push('/');
+    return null;
   }
 
-  if (!user) return null;
+  // Kullanıcı email'inden kullanıcı adı al (null kontrolü var)
+  const username = user.email ? user.email.split('@')[0] : 'kullanici';
 
-  // QR Kodu İndirme Fonksiyonu
   const handleDownload = () => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (canvas) {
       const pngUrl = canvas.toDataURL('image/png');
       const downloadLink = document.createElement('a');
       downloadLink.href = pngUrl;
-      const username = user?.email ? user.email.split('@')[0] : 'unknown';
       downloadLink.download = `hoyn-${username}-qr.png`;
       document.body.appendChild(downloadLink);
       downloadLink.click();
@@ -57,22 +44,11 @@ export default function QRGeneratorPage() {
         <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-8 text-center">
           QR Kodu Oluştur
         </h1>
-        <p className="text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-          Kim olduğunu bir QR ile anlat. Tişörtüne bas, telefonuna yapıştır, dünyaya göster.
-        </p>
 
         <div className="grid md:grid-cols-2 gap-12 items-start">
-          {/* Sol: QR Önizleme */}
           <div className="flex flex-col items-center">
             <div ref={qrRef} className="p-6 bg-white rounded-xl shadow-lg">
-              <QRCode
-                value={value}
-                size={size}
-                bgColor={bgColor}
-                fgColor={fgColor}
-                level="H"
-                includeMargin
-              />
+              <QRCodeWrapper value={value} size={size} bgColor={bgColor} fgColor={fgColor} />
             </div>
             <button
               onClick={handleDownload}
@@ -82,10 +58,8 @@ export default function QRGeneratorPage() {
             </button>
           </div>
 
-          {/* Sağ: Kontrol Paneli */}
           <div className="bg-gray-900 p-8 rounded-xl border border-purple-900">
             <h2 className="text-2xl font-bold text-white mb-6">Özelleştir</h2>
-
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">İçerik</label>
@@ -94,10 +68,8 @@ export default function QRGeneratorPage() {
                   value={value}
                   onChange={(e) => setValue(e.target.value)}
                   className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                  placeholder="hoyn.app/u/kullanici"
                 />
               </div>
-
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">Boyut</label>
                 <input
@@ -110,7 +82,6 @@ export default function QRGeneratorPage() {
                 />
                 <span className="text-sm text-gray-400">{size}px</span>
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">Arka Plan</label>
@@ -131,23 +102,10 @@ export default function QRGeneratorPage() {
                   />
                 </div>
               </div>
-
-              <div className="text-center mt-8">
-                <button
-                  onClick={() => router.push('/dashboard')}
-                  className="text-gray-400 hover:text-white transition"
-                >
-                  ← Panele Dön
-                </button>
-              </div>
             </div>
           </div>
         </div>
       </div>
     </div>
   );
-}
-
-function useEffect(arg0: () => void, arg1: (boolean | User | AppRouterInstance | null)[]) {
-  throw new Error('Function not implemented.');
 }

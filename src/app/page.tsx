@@ -16,7 +16,8 @@ export default function Home() {
   if (loading) return <div className="text-white">Yükleniyor...</div>;
 
   return (
-    <div className="py-24 px-6 text-center">
+  
+<div className="py-24 px-6 text-center">
       <h1 className="text-6xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron">
         HOYN!
       </h1>
