@@ -1,0 +1,12 @@
+/* src/styles/globals.css */
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Orbitron', monospace;
+  background: #000000;
+  color: #FFFFFF;
+}

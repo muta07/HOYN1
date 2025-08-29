@@ -1,0 +1,82 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+
+# Next.js
+.next/
+out/
+build/
+vercel
+
+# Environment Variables
+.env.local
+.env
+!.env.example
+
+# IDE and Editor
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+.cache
+coverage/
+.nyc_output/
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Built Files
+*.log
+*.tmp
+*.temp
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+yarn-debug.log
+.pnpm-debug.log
+
+# Next.js
+.next/
+out/
+build/
+vercel
+
+# Environment Variables
+.env.local
+.env
+!.env.example
+
+# IDE ve Editor
+.DS_Store
+Thumbs.db
+*.sublime-project
+*.sublime-workspace
+.cache
+coverage/
+.nyc_output/
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# System
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Derlenmiş Dosyalar
+*.log
+*.tmp
+*.temp
