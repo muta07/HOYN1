@@ -4,6 +4,8 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -13,42 +15,140 @@ export default function Home() {
     if (user) router.push('/dashboard');
   }, [user, router]);
 
-  if (loading) return <div className="text-white">Yükleniyor...</div>;
+  if (loading) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <Loading size="lg" text="HOYN! Yükleniyor..." />
+    </div>
+  );
 
   return (
-  
-<div className="py-24 px-6 text-center">
-      <h1 className="text-6xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron">
-        HOYN!
-      </h1>
-      <p className="text-xl text-gray-300 mt-6 max-w-2xl mx-auto">
-        QR kodunla tanış, tişörtüne bas, dünyaya göster.
-      </p>
-
-      <div className="mt-12 grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-        <div className="bg-gray-900 p-6 rounded-xl">
-          <h3 className="text-2xl font-bold text-purple-400 mb-4">🚗 Araban mı Var?</h3>
-          <p>QR’ını camına yapıştır. Sigorta, muayene, satılık ilanı — her şey tek tıkta.</p>
+    <div className="min-h-screen pt-24 px-6">
+      {/* Hero Section */}
+      <div className="text-center mb-16">
+        <div className="mb-8">
+          <h1 className="text-8xl font-black glow-text font-orbitron mb-4 float
+                         bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+            HOYN!
+          </h1>
+          <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full glow-intense" />
         </div>
-        <div className="bg-gray-900 p-6 rounded-xl">
-          <h3 className="text-2xl font-bold text-purple-400 mb-4">🐱 Evcil Hayvanın mı Var?</h3>
-          <p>Kolyesine QR koy. Kaybolursa, sahibine ulaşmak kolay.</p>
+        
+        <p className="text-2xl text-gray-300 mb-4 max-w-3xl mx-auto font-light">
+          QR kodunla tanış, tişörtüne bas, dünyaya göster.
+        </p>
+        <p className="text-lg text-purple-300 mb-12 max-w-2xl mx-auto">
+          Fiziksel dünyada dijital kimliğini taşı. Anonim mesajlar al, QR kodunu her yere bas!
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
+          <NeonButton
+            onClick={() => router.push('/auth/register')}
+            variant="primary"
+            size="lg"
+            glow
+            className="min-w-[200px]"
+          >
+            🚀 Başla Şimdi
+          </NeonButton>
+          <NeonButton
+            onClick={() => router.push('/auth/login')}
+            variant="outline"
+            size="lg"
+            className="min-w-[200px]"
+          >
+            Giriş Yap
+          </NeonButton>
         </div>
       </div>
 
-      <div className="mt-10 space-x-4">
-        <button
-          onClick={() => router.push('/auth/register')}
-          className="bg-gradient-to-r from-purple-600 to-pink-600 px-6 py-3 rounded-lg font-bold hover:shadow-lg transition"
-        >
-          Başla Şimdi
-        </button>
-        <button
-          onClick={() => router.push('/auth/login')}
-          className="border border-purple-500 text-purple-300 px-6 py-3 rounded-lg hover:bg-purple-900 transition"
-        >
-          Giriş Yap
-        </button>
+      {/* Features Grid */}
+      <div className="max-w-6xl mx-auto mb-16">
+        <h2 className="text-4xl font-bold text-center mb-12 glow-text">
+          Neler Yapabilirsin?
+        </h2>
+        
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">🚗</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              Araban mı Var?
+            </h3>
+            <p className="text-gray-300">
+              QR'ını camına yapıştır. Sigorta, muayene, satılık ilanı — her şey tek tıkta.
+            </p>
+          </div>
+
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">🐱</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              Evcil Hayvanın mı Var?
+            </h3>
+            <p className="text-gray-300">
+              Kolyesine QR koy. Kaybolursa, sahibine ulaşmak kolay.
+            </p>
+          </div>
+
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">👕</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              Tişört Tasarla
+            </h3>
+            <p className="text-gray-300">
+              QR kodunu tişört, hoodie, sticker'a yerleştir. Printify tarzı tasarla!
+            </p>
+          </div>
+
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">❓</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              Anonim Mesajlar
+            </h3>
+            <p className="text-gray-300">
+              QR'ini tarayan kişiler sana anonim soru gönderebilir.
+            </p>
+          </div>
+
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">📱</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              Mobil Tarayıcı
+            </h3>
+            <p className="text-gray-300">
+              Uygulama içi QR tarayıcı ile başkalarının kodlarını okut.
+            </p>
+          </div>
+
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group">
+            <div className="text-6xl mb-4 float">📈</div>
+            <h3 className="text-2xl font-bold text-purple-400 mb-4 group-hover:glow-text transition-all">
+              İstatistikler
+            </h3>
+            <p className="text-gray-300">
+              QR kodun kaç kez tarandı, kaç mesaj geldi? Hepsini gör!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="text-center mb-16">
+        <div className="glass-effect p-12 rounded-2xl cyber-border max-w-4xl mx-auto">
+          <h2 className="text-4xl font-bold glow-text mb-6">
+            HOYN! Artık Sadece Bir Fikir Değil
+          </h2>
+          <p className="text-xl text-gray-300 mb-8">
+            Bir <span className="text-purple-400 font-bold">lifestyle</span>. 💫
+          </p>
+          <NeonButton
+            onClick={() => router.push('/auth/register')}
+            variant="primary"
+            size="lg"
+            glow
+            className="text-xl px-12 py-4"
+          >
+            🚀 Hemen Başla - Ücretsiz!
+          </NeonButton>
+        </div>
       </div>
     </div>
   );
