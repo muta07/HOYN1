@@ -2,12 +2,14 @@
 'use client';
 
 import { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useRippleEffect } from '@/hooks/useScrollAnimation';
 
 interface NeonButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'outline';
   size?: 'sm' | 'md' | 'lg';
   glow?: boolean;
+  ripple?: boolean;
   className?: string;
 }
 
@@ -16,9 +18,21 @@ export default function NeonButton({
   variant = 'primary',
   size = 'md',
   glow = false,
+  ripple = true,
   className = '',
+  onClick,
   ...props
 }: NeonButtonProps) {
+  const { ripples, createRipple } = useRippleEffect();
+
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (ripple) {
+      createRipple(e);
+    }
+    if (onClick) {
+      onClick(e);
+    }
+  };
   const baseClasses = `
     font-orbitron font-bold transition-all duration-300 
     active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed
@@ -61,8 +75,25 @@ export default function NeonButton({
         ${variantClasses[variant]}
         ${className}
       `}
+      onClick={handleClick}
       {...props}
     >
+      {/* Ripple effects */}
+      {ripple && ripples.map((ripple) => (
+        <span
+          key={ripple.id}
+          className="absolute rounded-full bg-white/30 animate-ping"
+          style={{
+            left: ripple.x,
+            top: ripple.y,
+            width: '20px',
+            height: '20px',
+            pointerEvents: 'none',
+            animationDuration: '0.6s'
+          }}
+        />
+      ))}
+      
       {/* Hover effect overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent 
                       opacity-0 group-hover:opacity-100 group-hover:animate-pulse transition-opacity duration-300" />
