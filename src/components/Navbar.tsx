@@ -8,12 +8,21 @@ import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
 export default function Navbar() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   const handleLogoClick = () => {
     if (user) router.push('/dashboard');
     else router.push('/');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
   };
 
   return (
@@ -31,14 +40,25 @@ export default function Navbar() {
           {loading ? (
             <Loading size="sm" />
           ) : user ? (
-            <NeonButton
-              onClick={() => router.push('/dashboard')}
-              variant="primary"
-              size="sm"
-              glow
-            >
-              Panel
-            </NeonButton>
+            <>
+              <span className="text-purple-300 text-sm font-orbitron">
+                Merhaba, {user.displayName || user.email}
+              </span>
+              <NeonButton
+                onClick={() => router.push('/dashboard')}
+                variant="secondary"
+                size="sm"
+              >
+                Panel
+              </NeonButton>
+              <NeonButton
+                onClick={handleLogout}
+                variant="outline"
+                size="sm"
+              >
+                Çıkış
+              </NeonButton>
+            </>
           ) : (
             <>
               <NeonButton

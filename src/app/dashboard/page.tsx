@@ -4,9 +4,11 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
 
 export default function DashboardPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -15,78 +17,120 @@ export default function DashboardPage() {
     }
   }, [user, loading, router]);
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Yükleniyor...
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Dashboard yükleniyor..." />
       </div>
     );
   }
 
   if (!user) return null;
 
-  // ✅ user.email null olabilir, onu kontrol et
-  const username = user.email
-    ? user.email.split('@')[0]
-    : user.uid.substring(0, 10); // fallback: uid'in başı
+  const username = user.displayName || 
+    (user.email ? user.email.split('@')[0] : user.uid.substring(0, 10));
 
   return (
-    <div className="min-h-screen bg-black text-white py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-5xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-4 text-center">
-          HOYN! Panel
-        </h1>
-        <p className="text-gray-300 text-center mb-12">
-          Hoş geldin, <span className="font-bold">{username}</span>! Kimliğini paylaşmaya hazır mısın?
-        </p>
+    <div className="min-h-screen bg-black text-white py-24 px-6">
+      <div className="max-w-6xl mx-auto">
+        {/* Header */}
+        <div className="text-center mb-16">
+          <h1 className="text-6xl font-black glow-text font-orbitron mb-4 float
+                         bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            HOYN! Panel
+          </h1>
+          <p className="text-xl text-gray-300 mb-4">
+            Hoş geldin, <span className="text-purple-400 font-bold glow-text">{username}</span>!
+          </p>
+          <p className="text-purple-300">
+            Kimliğini paylaşmaya hazır mısın? 🚀
+          </p>
+        </div>
 
         {/* Ana Eylem Butonları */}
-        <div className="grid md:grid-cols-2 gap-8 mb-12">
-          <div
-            onClick={() => router.push('/dashboard/qr-generator')}
-            className="p-8 bg-gray-900 rounded-xl border border-purple-900 hover:border-purple-500 cursor-pointer transition-all transform hover:scale-105"
-          >
-            <h2 className="text-2xl font-bold text-white mb-3">✨ QR Kod Oluştur</h2>
-            <p className="text-gray-300">
+        <div className="grid md:grid-cols-2 gap-8 mb-16">
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
+               onClick={() => router.push('/dashboard/qr-generator')}>
+            <div className="text-6xl mb-4 float">✨</div>
+            <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
+              QR Kod Oluştur
+            </h2>
+            <p className="text-gray-300 mb-6">
               Kim olduğunu bir QR ile anlat. Tişörtüne bas, telefonuna yapıştır, dünyaya göster.
             </p>
+            <NeonButton variant="primary" size="md" glow>
+              🚀 QR Oluştur
+            </NeonButton>
           </div>
 
-          <div
-            onClick={() => router.push('/dashboard/profile')}
-            className="p-8 bg-gray-900 rounded-xl border border-purple-900 hover:border-purple-500 cursor-pointer transition-all transform hover:scale-105"
-          >
-            <h2 className="text-2xl font-bold text-white mb-3">👤 Profilini Yönet</h2>
-            <p className="text-gray-300">
+          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
+               onClick={() => router.push('/dashboard/profile')}>
+            <div className="text-6xl mb-4 float">👤</div>
+            <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
+              Profilini Yönet
+            </h2>
+            <p className="text-gray-300 mb-6">
               Bio, sosyal medya, anonim soru ayarları – kim olduğunu özelleştir.
             </p>
+            <NeonButton variant="secondary" size="md">
+              ⚙️ Profil Ayarları
+            </NeonButton>
           </div>
         </div>
 
-        {/* Diğer İşlevler */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <div
-            onClick={() => router.push('/dashboard/settings')}
-            className="p-6 bg-gray-900 rounded-lg border border-gray-700 hover:border-purple-600 text-center cursor-pointer transition"
-          >
-            <h3 className="font-bold text-white">⚙️ Ayarlar</h3>
+        {/* Özellik Grid'i */}
+        <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="glass-effect p-6 rounded-lg cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer text-center"
+               onClick={() => router.push('/designer')}>
+            <div className="text-4xl mb-3 float">👕</div>
+            <h3 className="font-bold text-white mb-2 group-hover:glow-text transition-all">
+              Tişört Tasarımı
+            </h3>
+            <p className="text-gray-400 text-sm">QR'ini tişörtüne yerleştir</p>
           </div>
-          <div
-            onClick={() => router.push('/scan')}
-            className="p-6 bg-gray-900 rounded-lg border border-gray-700 hover:border-purple-600 text-center cursor-pointer transition"
-          >
-            <h3 className="font-bold text-white">🔍 QR Tara</h3>
+          
+          <div className="glass-effect p-6 rounded-lg cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer text-center"
+               onClick={() => router.push('/scan')}>
+            <div className="text-4xl mb-3 float">📱</div>
+            <h3 className="font-bold text-white mb-2 group-hover:glow-text transition-all">
+              QR Tarayıcı
+            </h3>
+            <p className="text-gray-400 text-sm">Başkalarının QR'larını tara</p>
           </div>
-          <div
+          
+          <div className="glass-effect p-6 rounded-lg cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer text-center"
+               onClick={() => router.push('/dashboard/settings')}>
+            <div className="text-4xl mb-3 float">⚙️</div>
+            <h3 className="font-bold text-white mb-2 group-hover:glow-text transition-all">
+              Ayarlar
+            </h3>
+            <p className="text-gray-400 text-sm">Hesap ve güvenlik ayarları</p>
+          </div>
+        </div>
+
+        {/* Çıkış Butonu */}
+        <div className="text-center">
+          <NeonButton 
             onClick={() => {
               if (confirm('Çıkış yapmak istediğine emin misin?')) {
-                router.push('/');
+                handleLogout();
               }
             }}
-            className="p-6 bg-gray-900 rounded-lg border border-gray-700 hover:border-purple-600 text-center cursor-pointer transition"
+            variant="outline"
+            size="md"
+            className="text-red-400 border-red-500 hover:bg-red-500/20"
           >
-            <h3 className="font-bold text-white">🚪 Çıkış Yap</h3>
-          </div>
+            🚪 Çıkış Yap
+          </NeonButton>
         </div>
       </div>
     </div>

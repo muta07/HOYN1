@@ -2,14 +2,35 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
 
 export default function RegisterPage() {
+  const { user, loading } = useAuth();
   const router = useRouter();
+
+  // Eğer zaten giriş yapmışsa dashboard'a yönlendir
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Yükleniyor..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="max-w-md w-full text-center">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-6">
+        <h1 className="text-4xl font-black glow-text font-orbitron mb-6 float
+                       bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
           HOYN!
         </h1>
         <p className="text-gray-300 mb-8">Hangi tür hesap oluşturmak istiyorsun?</p>
@@ -32,11 +53,11 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        <p className="text-sm text-gray-500 mt-8">
+        <p className="text-sm text-gray-400 mt-8">
           Zaten hesabın var mı?{' '}
           <span
             onClick={() => router.push('/auth/login')}
-            className="text-purple-400 hover:underline cursor-pointer"
+            className="text-purple-400 hover:text-purple-300 cursor-pointer font-bold transition-colors"
           >
             Giriş yap
           </span>

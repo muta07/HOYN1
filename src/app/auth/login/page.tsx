@@ -1,52 +1,68 @@
 // src/app/auth/login/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { user, loading, loginWithEmail, loginWithGoogle, error } = useAuth();
   const router = useRouter();
 
-  // ✅ Düzeltilmiş: 'e' parametresine 'React.FormEvent' türü verildi
+  // Eğer zaten giriş yapmışsa dashboard'a yönlendir
+  useEffect(() => {
+    if (user && !loading) {
+      router.push('/dashboard');
+    }
+  }, [user, loading, router]);
+
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push('/dashboard');
-    } catch (error) {
-      alert('Giriş başarısız. Email veya şifre hatalı.');
-      setLoading(false);
+      await loginWithEmail(email, password);
+      // useAuth hook otomatik olarak dashboard'a yönlendirecek
+    } catch (error: any) {
+      // Error useAuth hook'ta handle ediliyor
+      console.error('Login error:', error);
     }
   };
 
-  // Google ile Giriş
   const handleGoogleLogin = async () => {
-    const provider = new GoogleAuthProvider();
-    setLoading(true);
-
     try {
-      await signInWithPopup(auth, provider);
-      router.push('/dashboard');
-    } catch (error) {
-      alert('Google ile giriş başarısız.');
-      setLoading(false);
+      await loginWithGoogle();
+      // useAuth hook otomatik olarak dashboard'a yönlendirecek
+    } catch (error: any) {
+      console.error('Google login error:', error);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Giriş yapılıyor..." />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <div className="max-w-md w-full">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-6 text-center">
+      <div className="max-w-md w-full glass-effect p-8 rounded-xl cyber-border">
+        <h1 className="text-4xl font-black glow-text font-orbitron mb-6 text-center
+                       bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
           HOYN!
         </h1>
         <p className="text-gray-300 mb-6 text-center">Hesabına giriş yap</p>
+
+        {error && (
+          <div className="bg-red-900/20 border border-red-500 text-red-300 p-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
 
         {/* Email/Şifre Formu */}
         <form onSubmit={handleEmailLogin} className="space-y-4">
@@ -55,7 +71,9 @@ export default function LoginPage() {
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg"
+            className="w-full p-3 bg-gray-900/50 border border-purple-500/30 rounded-lg
+                       focus:border-purple-400 focus:outline-none transition-colors
+                       text-white placeholder-gray-400"
             required
           />
 
@@ -64,27 +82,34 @@ export default function LoginPage() {
             placeholder="Şifre"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg"
+            className="w-full p-3 bg-gray-900/50 border border-purple-500/30 rounded-lg
+                       focus:border-purple-400 focus:outline-none transition-colors
+                       text-white placeholder-gray-400"
             required
           />
 
-          <button
+          <NeonButton
             type="submit"
+            variant="primary"
+            size="lg"
+            glow
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-3 rounded-lg font-bold disabled:opacity-70"
+            className="w-full"
           >
-            {loading ? 'Giriş Yapılıyor...' : 'Giriş Yap'}
-          </button>
+            {loading ? 'Giriş Yapılıyor...' : '🚀 Giriş Yap'}
+          </NeonButton>
         </form>
 
         {/* Google ile Giriş */}
         <div className="mt-6">
-          <button
+          <NeonButton
             onClick={handleGoogleLogin}
+            variant="outline"
+            size="lg"
             disabled={loading}
-            className="w-full border border-gray-600 text-white py-3 rounded-lg hover:bg-gray-800 transition flex items-center justify-center gap-2"
+            className="w-full flex items-center justify-center gap-3"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" className="mr-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
               <path
                 d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
                 fill="#4285F4"
@@ -103,15 +128,15 @@ export default function LoginPage() {
               />
             </svg>
             Google ile Giriş
-          </button>
+          </NeonButton>
         </div>
 
         {/* Kaydol Linki */}
-        <p className="text-sm text-gray-500 mt-6 text-center">
+        <p className="text-sm text-gray-400 mt-6 text-center">
           Hesabın yok mu?{' '}
           <span
             onClick={() => router.push('/auth/register')}
-            className="text-purple-400 hover:underline cursor-pointer"
+            className="text-purple-400 hover:text-purple-300 cursor-pointer font-bold transition-colors"
           >
             Kaydol
           </span>
