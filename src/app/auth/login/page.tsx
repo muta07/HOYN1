@@ -1,24 +1,26 @@
 // src/app/auth/login/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { user, loading, loginWithEmail, loginWithGoogle, error } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnUrl = searchParams.get('returnUrl') || '/dashboard';
 
-  // Eğer zaten giriş yapmışsa dashboard'a yönlendir
+  // Eğer zaten giriş yapmışsa yönlendir
   useEffect(() => {
     if (user && !loading) {
-      router.push('/dashboard');
+      router.push(returnUrl);
     }
-  }, [user, loading, router]);
+  }, [user, loading, router, returnUrl]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,5 +145,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Sayfa yükleniyor..." />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

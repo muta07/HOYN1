@@ -37,7 +37,7 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const username = user.displayName || 
-    (user.email ? user.email.split('@')[0] : user.uid.substring(0, 10));
+    (user.email ? user.email.split('@')[0] : 'kullanici');
 
   return (
     <div className="min-h-screen bg-black text-white py-24 px-6">
@@ -88,7 +88,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Özellik Grid'i */}
-        <div className="grid md:grid-cols-3 gap-6 mb-12">
+        <div className="grid md:grid-cols-4 gap-6 mb-12">
+          <div className="glass-effect p-6 rounded-lg cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer text-center"
+               onClick={() => router.push('/dashboard/messages')}>
+            <div className="text-4xl mb-3 float">📬</div>
+            <h3 className="font-bold text-white mb-2 group-hover:glow-text transition-all">
+              Mesaj Kutusu
+            </h3>
+            <p className="text-gray-400 text-sm">Anonim mesajlarını oku</p>
+          </div>
+          
           <div className="glass-effect p-6 rounded-lg cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer text-center"
                onClick={() => router.push('/designer')}>
             <div className="text-4xl mb-3 float">👕</div>

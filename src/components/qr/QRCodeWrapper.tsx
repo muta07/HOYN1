@@ -21,49 +21,74 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
   logo,
   className = ''
 }: QRCodeWrapperProps) {
-  const [QRCode, setQRCode] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [QRCodeComponent, setQRCodeComponent] = useState<any>(null);
+  const [isClient, setIsClient] = useState(false);
 
+  // Client-side mounting
   useEffect(() => {
-    import('qrcode.react')
-      .then((mod) => {
-        setQRCode(() => mod.default);
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error('Failed to load QR Code:', error);
-        setLoading(false);
-      });
+    setIsClient(true);
   }, []);
 
-  if (loading || !QRCode) {
+  // Load QR component
+  useEffect(() => {
+    if (!isClient) return;
+    
+    const loadQR = async () => {
+      try {
+        const { default: QRCode } = await import('qrcode.react');
+        setQRCodeComponent(() => QRCode);
+        console.log('✅ QR Component yüklendi!');
+      } catch (error) {
+        console.error('❌ QR yükleme hatası:', error);
+      }
+    };
+    
+    loadQR();
+  }, [isClient]);
+
+  // Show loading until client-side and component loaded
+  if (!isClient || !QRCodeComponent) {
     return (
       <div 
         className={`flex items-center justify-center glass-effect rounded-lg cyber-border ${className}`}
         style={{ width: size, height: size }}
       >
-        <Loading size="md" text="Generating QR..." />
+        <Loading size="md" text="QR hazırlanıyor..." />
       </div>
     );
   }
 
+  console.log('🎨 QR Render ediliyor:', { value, size, QRCodeComponent: !!QRCodeComponent });
+
+  const qrValue = value || 'https://hoyn.app';
+
   return (
     <div className={`relative group ${className}`}>
       <div className="glass-effect p-4 rounded-lg cyber-border hover:glow-intense transition-all duration-300">
-        <QRCode 
-          value={value} 
-          size={size - 32} // Account for padding
-          bgColor={bgColor} 
-          fgColor={fgColor} 
-          level="H" 
-          includeMargin
+        <QRCodeComponent
+          value={qrValue}
+          size={size - 32}
+          bgColor={bgColor}
+          fgColor={fgColor}
+          level="H"
+          includeMargin={true}
           imageSettings={logo ? {
             src: logo,
-            height: 40,
-            width: 40,
+            height: Math.min(40, (size - 32) * 0.2),
+            width: Math.min(40, (size - 32) * 0.2),
             excavate: true,
           } : undefined}
         />
+      </div>
+      
+      {/* Success indicator */}
+      <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+        <span className="text-white text-xs font-bold">✓</span>
+      </div>
+      
+      {/* Debug info */}
+      <div className="absolute -bottom-8 left-0 text-xs text-green-400">
+        QR: {qrValue.substring(0, 20)}...
       </div>
       
       {/* Floating effect on hover */}

@@ -1,105 +1,215 @@
 // src/app/ask/[username]/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import { db } from '@/lib/firebase';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
+import AnimatedCard from '@/components/ui/AnimatedCard';
 
-export default function AskPage({ params }: { params: { username: string } }) {
-  const { username } = params;
+export default function AskPage() {
+  const params = useParams();
+  const router = useRouter();
+  const username = params.username as string;
+  
   const [message, setMessage] = useState('');
-  const [isAnonymous, setIsAnonymous] = useState(true);
-  const [sent, setSent] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
-  // Kullanıcı adını düzgün formatla (ilk harf büyük)
-  const displayName = username.charAt(0).toUpperCase() + username.slice(1);
+  // Message length limit
+  const maxLength = 500;
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
-
-    // Burada Firebase'e mesajı kaydet (ileride src/lib/api.ts ile yapılacak)
+    
+    if (!message.trim()) {
+      setError('Mesaj boş olamaz!');
+      return;
+    }
+    
+    if (message.length > maxLength) {
+      setError(`Mesaj en fazla ${maxLength} karakter olabilir!`);
+      return;
+    }
+    
+    setIsSubmitting(true);
+    setError('');
+    
     try {
-      // Örnek: await addDoc(collection(database, 'messages'), { from: isAnonymous ? 'Anonim' : 'Kullanıcı', message, to: username })
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simülasyon
-      setSent(true);
-    } catch (error) {
-      alert('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
+      // Add message to Firestore
+      await addDoc(collection(db, 'messages'), {
+        to: username,
+        message: message.trim(),
+        timestamp: serverTimestamp(),
+        read: false,
+        ip: 'hidden', // Could add IP tracking for spam prevention
+      });
+      
+      setSubmitted(true);
+      setMessage('');
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      setError('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (sent) {
+  const resetForm = () => {
+    setSubmitted(false);
+    setMessage('');
+    setError('');
+  };
+
+  if (submitted) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-        <div className="max-w-md w-full text-center">
-          <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-6">
-            HOYN!
-          </h1>
-          <div className="bg-gray-900 p-8 rounded-xl border border-purple-900">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-green-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            <h2 className="text-2xl font-bold text-white mb-2">Mesaj Gönderildi!</h2>
-            <p className="text-gray-300">
-              {displayName} adlı kullanıcıya anonim mesajın iletildi. Umarız cevabını alırsın!
+        <AnimatedCard className="max-w-md w-full text-center">
+          <div className="glass-effect p-8 rounded-xl cyber-border">
+            <div className="text-6xl mb-4">✨</div>
+            <h1 className="text-3xl font-black glow-text font-orbitron mb-4">
+              Mesaj Gönderildi!
+            </h1>
+            <p className="text-gray-300 mb-6">
+              Anonim mesajın <span className="text-purple-400 font-bold">{username}</span> kullanıcısına ulaştı!
             </p>
+            
+            <div className="space-y-3">
+              <NeonButton
+                onClick={resetForm}
+                variant="primary"
+                size="lg"
+                glow
+                className="w-full"
+              >
+                💬 Yeni Mesaj Gönder
+              </NeonButton>
+              
+              <NeonButton
+                onClick={() => router.push('/')}
+                variant="outline"
+                size="md"
+                className="w-full"
+              >
+                🏠 Ana Sayfaya Dön
+              </NeonButton>
+            </div>
           </div>
-        </div>
+        </AnimatedCard>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <form onSubmit={handleSubmit} className="max-w-md w-full">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-6 text-center">
-          HOYN!
-        </h1>
-
-        <div className="bg-gray-900 p-6 rounded-xl border border-purple-900">
-          <h2 className="text-2xl font-bold text-white mb-2">
-            {displayName}'a Soru Sor
-          </h2>
-          <p className="text-gray-300 mb-6 text-sm">
-            Merak ettiğin her şeyi sorabilirsin. Kim olduğunu kimse öğrenmeyecek.
-          </p>
-
-          <textarea
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={`Merhaba ${displayName}, sana ne sormak istersin?`}
-            className="w-full p-4 bg-gray-800 border border-gray-700 rounded-lg mb-4 h-32 text-white placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-purple-600"
-            maxLength={500}
-            required
-          />
-
-          <div className="flex items-center mb-6">
-            <input
-              type="checkbox"
-              id="anonymous"
-              checked={isAnonymous}
-              onChange={() => setIsAnonymous(!isAnonymous)}
-              className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-600"
-            />
-            <label htmlFor="anonymous" className="ml-2 text-gray-300">
-              Anonim olarak gönder
-            </label>
+    <div className="min-h-screen bg-black text-white p-6">
+      <div className="max-w-md mx-auto">
+        {/* Header */}
+        <AnimatedCard direction="up" delay={0}>
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-black glow-text font-orbitron mb-4">
+              💬 Anonim Mesaj
+            </h1>
+            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 p-4 rounded-lg border border-purple-500/30">
+              <p className="text-gray-300 mb-1">
+                👤 <span className="text-purple-400 font-bold text-xl">{username}</span> kullanıcısına
+              </p>
+              <p className="text-sm text-gray-400">
+                anonim bir mesaj gönderin
+              </p>
+            </div>
           </div>
+        </AnimatedCard>
 
-          <button
-            type="submit"
-            disabled={loading || !message.trim()}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-3 rounded-lg font-bold text-white disabled:opacity-70 disabled:cursor-not-allowed hover:shadow-lg transition"
-          >
-            {loading ? 'Gönderiliyor...' : 'Mesajı Gönder'}
-          </button>
-        </div>
+        {/* Message Form */}
+        <AnimatedCard direction="up" delay={200}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="glass-effect p-6 rounded-xl cyber-border">
+              <label className="block text-lg font-bold text-purple-300 mb-3">
+                Mesajınız
+              </label>
+              
+              <textarea
+                value={message}
+                onChange={(e) => {
+                  setMessage(e.target.value);
+                  setError('');
+                }}
+                placeholder="Buraya anonim mesajınızı yazın..."
+                className="w-full h-32 p-4 bg-gray-900/50 border border-purple-500/30 rounded-lg
+                           focus:border-purple-400 focus:outline-none transition-colors
+                           text-white placeholder-gray-400 resize-none"
+                maxLength={maxLength + 50} // Allow a bit more for real-time feedback
+              />
+              
+              <div className="flex justify-between items-center mt-2">
+                <span className={`text-sm ${
+                  message.length > maxLength ? 'text-red-400' : 'text-gray-400'
+                }`}>
+                  {message.length}/{maxLength}
+                </span>
+                
+                {message.length > maxLength && (
+                  <span className="text-red-400 text-sm font-bold">
+                    ⚠️ Çok uzun!
+                  </span>
+                )}
+              </div>
+            </div>
+            
+            {error && (
+              <div className="bg-red-900/20 border border-red-500 text-red-300 p-3 rounded-lg text-center">
+                {error}
+              </div>
+            )}
+            
+            <div className="space-y-3">
+              <NeonButton
+                type="submit"
+                variant="primary"
+                size="lg"
+                glow
+                disabled={isSubmitting || !message.trim() || message.length > maxLength}
+                className="w-full"
+              >
+                {isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                    Gönderiliyor...
+                  </span>
+                ) : (
+                  '🚀 Anonim Mesaj Gönder'
+                )}
+              </NeonButton>
+              
+              <NeonButton
+                onClick={() => router.push('/')}
+                variant="outline"
+                size="md"
+                className="w-full"
+              >
+                ← Ana Sayfaya Dön
+              </NeonButton>
+            </div>
+          </form>
+        </AnimatedCard>
 
-        <p className="text-xs text-gray-500 text-center mt-4">
-          HOYN! ile tanış. QR kodunla kim olduğunu göster.
-        </p>
-      </form>
+        {/* Info */}
+        <AnimatedCard direction="up" delay={400} className="mt-8">
+          <div className="text-center p-4">
+            <h4 className="text-lg font-bold text-purple-300 mb-3">🛡️ Güvenlik</h4>
+            <div className="space-y-2 text-sm text-gray-400">
+              <p>🕵️ Kimliğiniz tamamen gizli</p>
+              <p>🚫 Spam ve zarar verici içerik yasak</p>
+              <p>📝 Mesajlar {username} kullanıcısına iletilir</p>
+            </div>
+          </div>
+        </AnimatedCard>
+      </div>
     </div>
   );
 }
