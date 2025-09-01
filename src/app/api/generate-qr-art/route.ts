@@ -69,45 +69,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    /* 
-    // Real Hugging Face API call (uncomment when token is available)
-    const payload = {
-      inputs: prompt,
-      parameters: {
-        qr_code_content,
-        num_inference_steps,
-        guidance_scale,
-        controlnet_conditioning_scale: 1.1,
-        seed: Math.floor(Math.random() * 1000000)
-      }
-    };
-
-    const response = await fetch(MODEL_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${HF_API_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Hugging Face API error:', errorText);
-      return NextResponse.json(
-        { error: 'AI QR art generation failed' },
-        { status: response.status }
-      );
-    }
-
-    const imageBuffer = await response.arrayBuffer();
-    
-    return new NextResponse(imageBuffer, {
-      headers: {
-        'Content-Type': 'image/png',
-        'Cache-Control': 'no-cache',
-      },
-    });
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
