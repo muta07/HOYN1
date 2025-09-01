@@ -11,6 +11,17 @@ npx vercel env add NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID "818752786451" --env
 npx vercel env add NEXT_PUBLIC_FIREBASE_APP_ID "1:818752786451:web:d3dc938ad4ee898a9d6fe6" --environment=production
 npx vercel env add NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID "G-HQ6KYZZPQG" --environment=production
 
+# Hugging Face API Configuration
+Write-Host "🤗 Setting up Hugging Face API..." -ForegroundColor Yellow
+Write-Host "Please get your Hugging Face API token from: https://huggingface.co/settings/tokens" -ForegroundColor Cyan
+$hfToken = Read-Host "Enter your Hugging Face API Token"
+if ($hfToken) {
+    npx vercel env add HUGGING_FACE_API_TOKEN "$hfToken" --environment=production
+    Write-Host "✅ Hugging Face API token configured!" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  Warning: No Hugging Face token provided. AI QR generation will use fallback mode." -ForegroundColor Yellow
+}
+
 Write-Host "✅ Environment variables configured!" -ForegroundColor Green
 Write-Host "🚀 Now deploying to production..." -ForegroundColor Yellow
 

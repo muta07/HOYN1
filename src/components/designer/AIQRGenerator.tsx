@@ -92,15 +92,18 @@ export default function AIQRGenerator({ userQRCode, onGenerated, onClose }: AIQR
         ? promptTemplates.find(t => t.id === selectedStyle)?.prompt || prompt
         : prompt;
 
-      // Option 1: Use real Hugging Face API (uncomment when ready)
-      // await generateWithHuggingFace(finalPrompt);
-      
-      // Option 2: Demo simulation (current)
-      await simulateAIGeneration(finalPrompt);
+      // Use real Hugging Face API
+      await generateWithHuggingFace(finalPrompt);
       
     } catch (error) {
       console.error('AI QR generation failed:', error);
-      alert('AI QR kod oluşturma başarısız oldu. Lütfen tekrar deneyin.');
+      
+      // Fallback to simulation if API fails
+      console.log('API failed, falling back to simulation...');
+      await simulateAIGeneration(selectedStyle 
+        ? promptTemplates.find(t => t.id === selectedStyle)?.prompt || prompt
+        : prompt);
+        
     } finally {
       setIsGenerating(false);
     }
@@ -124,7 +127,19 @@ export default function AIQRGenerator({ userQRCode, onGenerated, onClose }: AIQR
     });
     
     if (!response.ok) {
-      throw new Error('AI generation failed');
+      const errorData = await response.json().catch(() => ({}));
+      
+      if (response.status === 503) {
+        alert('🤖 AI modeli yükleniyor! Lütfen 10-20 saniye bekleyip tekrar deneyin.');
+        throw new Error('Model loading');
+      }
+      
+      if (response.status === 500 && errorData.error?.includes('token')) {
+        alert('🔑 API yetkilendirme hatası! Lütfen site yöneticisi ile iletişime geçin.');
+        throw new Error('API token missing');
+      }
+      
+      throw new Error(`AI generation failed: ${errorData.error || 'Unknown error'}`);
     }
     
     const blob = await response.blob();

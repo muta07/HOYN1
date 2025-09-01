@@ -15,27 +15,58 @@ export async function POST(request: NextRequest) {
 
     // Hugging Face API Configuration
     const HF_API_TOKEN = process.env.HUGGING_FACE_API_TOKEN;
-    const MODEL_URL = "https://api-inference.huggingface.co/models/DionTimmer/controlnet_qrcode-control_v1p_sd15";
-
+    
     if (!HF_API_TOKEN) {
       return NextResponse.json(
-        { error: 'Hugging Face API token bulunamadı' },
+        { error: 'Hugging Face API token bulunamadı. Lütfen HUGGING_FACE_API_TOKEN environment variable\'ını ayarlayın.' },
         { status: 500 }
       );
     }
 
-    // For demo purposes, return a simulated response
-    // In production, uncomment the real API call below
+    // Use Hugging Face Inference API for QR Code generation
+    const response = await fetch("https://api-inference.huggingface.co/models/huggingface-projects/QR-code-AI-art-generator", {
+      method: "POST",
+      headers: {
+        'Authorization': `Bearer ${HF_API_TOKEN}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        inputs: {
+          prompt: prompt,
+          qr_code_content: qr_code_content,
+          num_inference_steps: num_inference_steps,
+          guidance_scale: guidance_scale,
+          controlnet_conditioning_scale: 1.1,
+          seed: Math.floor(Math.random() * 1000000)
+        }
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Hugging Face API error:', errorText);
+      
+      // If model is loading, return appropriate message
+      if (response.status === 503) {
+        return NextResponse.json(
+          { error: 'AI modeli yükleniyor, lütfen birkaç saniye bekleyip tekrar deneyin.' },
+          { status: 503 }
+        );
+      }
+      
+      return NextResponse.json(
+        { error: 'AI QR art oluşturma başarısız oldu.' },
+        { status: response.status }
+      );
+    }
+
+    const imageBuffer = await response.arrayBuffer();
     
-    // Simulate AI processing delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Return demo response
-    return NextResponse.json({
-      success: true,
-      message: 'Demo mode - AI QR art generation simulated',
-      prompt: prompt,
-      qr_content: qr_code_content
+    return new NextResponse(imageBuffer, {
+      headers: {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=3600',
+      },
     });
 
     /* 
@@ -77,12 +108,10 @@ export async function POST(request: NextRequest) {
         'Cache-Control': 'no-cache',
       },
     });
-    */
-
   } catch (error) {
     console.error('API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Sunucu hatası oluştu. Lütfen tekrar deneyin.' },
       { status: 500 }
     );
   }
