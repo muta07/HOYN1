@@ -25,6 +25,8 @@ export default function QRGeneratorPage() {
   const [customLogo, setCustomLogo] = useState<string>('');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [qrGenerated, setQrGenerated] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Generate QR value based on type
@@ -92,6 +94,35 @@ export default function QRGeneratorPage() {
     return '/hoyn-logo.svg';
   };
 
+  // Handle QR Generation
+  const handleGenerateQR = async () => {
+    setIsGenerating(true);
+    
+    try {
+      // Validate custom URL if needed
+      if (qrType === 'custom' && customValue.trim() === '') {
+        alert('Lütfen özel URL\u0027nizi girin!');
+        setIsGenerating(false);
+        return;
+      }
+      
+      // Simulate generation process
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      setQrGenerated(true);
+      
+      // Success message
+      const qrTypeText = qrType === 'profile' ? 'Profil' : qrType === 'anonymous' ? 'Anonim Mesaj' : 'Özel';
+      alert(`✨ ${qrTypeText} QR kodu başarıyla oluşturuldu!`);
+      
+    } catch (error) {
+      console.error('QR Generation error:', error);
+      alert('QR oluştururken hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleDownload = async () => {
     if (!qrRef.current) return;
     
@@ -111,6 +142,11 @@ export default function QRGeneratorPage() {
       router.push('/auth/login');
     }
   }, [user, authLoading, router]);
+
+  // Reset QR when type changes
+  useEffect(() => {
+    setQrGenerated(false);
+  }, [qrType, customValue, size, bgColor, fgColor, showLogo, customLogo]);
 
   if (authLoading) {
     return (
@@ -148,44 +184,94 @@ export default function QRGeneratorPage() {
               ref={qrRef} 
               className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300"
             >
-              <QRCodeWrapper 
-                value={qrValue} 
-                size={size} 
-                bgColor={bgColor} 
-                fgColor={fgColor}
-                logo={getCurrentLogo()}
-                className=""
-              />
+              {qrGenerated ? (
+                <QRCodeWrapper 
+                  value={qrValue} 
+                  size={size} 
+                  bgColor={bgColor} 
+                  fgColor={fgColor}
+                  logo={getCurrentLogo()}
+                  className=""
+                />
+              ) : (
+                <div 
+                  className="flex flex-col items-center justify-center bg-gray-900 rounded-lg border-2 border-dashed border-purple-500/30"
+                  style={{ width: size, height: size }}
+                >
+                  <div className="text-6xl mb-4 opacity-50">📱</div>
+                  <p className="text-gray-400 text-center text-sm mb-2">QR Kodunuz Burada Gözükecek</p>
+                  <p className="text-purple-300 text-xs text-center">Ayarları yapıp "QR Oluştur" butonuna bas</p>
+                </div>
+              )}
             </div>
             
-            {/* Download Button */}
-            <NeonButton
-              onClick={handleDownload}
-              variant="primary"
-              size="lg"
-              glow
-              disabled={isDownloading}
-              className="w-64"
-            >
-              {isDownloading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeLinecap="round" />
-                  </svg>
-                  İndiriliyor...
-                </span>
-              ) : (
-                '📱 QR\'ı İndir (PNG)'
-              )}
-            </NeonButton>
+            {/* Generate Button */}
+            {!qrGenerated && (
+              <NeonButton
+                onClick={handleGenerateQR}
+                variant="primary"
+                size="lg"
+                glow
+                disabled={isGenerating}
+                className="w-64"
+              >
+                {isGenerating ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                    QR Oluşturuluyor...
+                  </span>
+                ) : (
+                  '🎆 QR Kodu Oluştur'
+                )}
+              </NeonButton>
+            )}
+            
+            {/* Download Button - Only show when QR is generated */}
+            {qrGenerated && (
+              <NeonButton
+                onClick={handleDownload}
+                variant="primary"
+                size="lg"
+                glow
+                disabled={isDownloading}
+                className="w-64"
+              >
+                {isDownloading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                    İndiriliyor...
+                  </span>
+                ) : (
+                  '📱 QR\'i İndir (PNG)'
+                )}
+              </NeonButton>
+            )}
 
-            {/* QR Info */}
-            <div className="text-center space-y-2">
-              <p className="text-sm text-purple-300">QR İçeriği:</p>
-              <code className="text-xs bg-gray-900 px-3 py-1 rounded text-gray-300 break-all block max-w-xs">
-                {qrValue}
-              </code>
-            </div>
+            {/* Reset Button - Only show when QR is generated */}
+            {qrGenerated && (
+              <NeonButton
+                onClick={() => setQrGenerated(false)}
+                variant="outline"
+                size="md"
+                className="w-48"
+              >
+                🔄 Yeni QR Oluştur
+              </NeonButton>
+            )}
+
+            {/* QR Info - Only show when generated */}
+            {qrGenerated && (
+              <div className="text-center space-y-2">
+                <p className="text-sm text-purple-300">QR İçeriği:</p>
+                <code className="text-xs bg-gray-900 px-3 py-1 rounded text-gray-300 break-all block max-w-xs">
+                  {qrValue}
+                </code>
+              </div>
+            )}
           </AnimatedCard>
 
           {/* Customization Panel */}
@@ -195,11 +281,11 @@ export default function QRGeneratorPage() {
             <div className="space-y-8">
               {/* QR Type Selection */}
               <div>
-                <label className="block text-lg font-bold text-purple-300 mb-4">QR Türü</label>
+                <label className="block text-lg font-bold text-purple-300 mb-4">QR Türü Seçin 🎯</label>
                 <div className="grid grid-cols-1 gap-3">
                   <button
                     onClick={() => setQrType('profile')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${
                       qrType === 'profile'
                         ? 'border-purple-500 bg-purple-900/30 glow-subtle'
                         : 'border-gray-600 bg-gray-800 hover:border-purple-400'
@@ -207,17 +293,22 @@ export default function QRGeneratorPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">👤</span>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-bold text-white">Profil QR'ı 🎆</h3>
                         <p className="text-sm text-gray-400">HOYN! Profil - hoyn.app/u/{username}</p>
                         <p className="text-xs text-purple-300 mt-1">Profil sayfanı açar</p>
                       </div>
+                      {qrType === 'profile' && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      )}
                     </div>
                   </button>
 
                   <button
                     onClick={() => setQrType('anonymous')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${
                       qrType === 'anonymous'
                         ? 'border-purple-500 bg-purple-900/30 glow-subtle'
                         : 'border-gray-600 bg-gray-800 hover:border-purple-400'
@@ -225,17 +316,22 @@ export default function QRGeneratorPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">💬</span>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-bold text-white">Anonim Soru QR'ı 💬</h3>
                         <p className="text-sm text-gray-400">HOYN! Mesaj - hoyn.app/ask/{username}</p>
                         <p className="text-xs text-purple-300 mt-1">Sana anonim mesaj gönderir</p>
                       </div>
+                      {qrType === 'anonymous' && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      )}
                     </div>
                   </button>
 
                   <button
                     onClick={() => setQrType('custom')}
-                    className={`p-4 rounded-lg border-2 transition-all text-left ${
+                    className={`p-4 rounded-lg border-2 transition-all text-left relative ${
                       qrType === 'custom'
                         ? 'border-purple-500 bg-purple-900/30 glow-subtle'
                         : 'border-gray-600 bg-gray-800 hover:border-purple-400'
@@ -243,11 +339,16 @@ export default function QRGeneratorPage() {
                   >
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">🔗</span>
-                      <div>
+                      <div className="flex-1">
                         <h3 className="font-bold text-white">Özel HOYN! QR 🔗</h3>
                         <p className="text-sm text-gray-400">HOYN! formatında özel link</p>
                         <p className="text-xs text-purple-300 mt-1">Kendi URL'ini HOYN! ile wrap'ler</p>
                       </div>
+                      {qrType === 'custom' && (
+                        <div className="absolute top-2 right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white text-xs font-bold">✓</span>
+                        </div>
+                      )}
                     </div>
                   </button>
                 </div>
