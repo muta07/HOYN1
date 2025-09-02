@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Test Codes - HOYN!</title>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.js"></script>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background: #000; 
+            color: white; 
+            padding: 20px; 
+            text-align: center; 
+        }
+        .qr-container { 
+            display: inline-block; 
+            margin: 20px; 
+            padding: 20px; 
+            border: 2px solid #9333ea; 
+            border-radius: 10px; 
+            background: #1a1a1a;
+        }
+        canvas { 
+            display: block; 
+            margin: 10px auto; 
+        }
+        h2 { 
+            color: #e040fb; 
+        }
+        .qr-data {
+            font-family: monospace;
+            font-size: 12px;
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            word-break: break-all;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 QR Test Codes for HOYN! Scanner</h1>
+    <p>Bu QR kodları HOYN! tarayıcısını test etmek için kullanabilirsiniz.</p>
+
+    <div class="qr-container">
+        <h2>👤 HOYN! Profile QR</h2>
+        <canvas id="qr1"></canvas>
+        <div class="qr-data" id="data1"></div>
+    </div>
+
+    <div class="qr-container">
+        <h2>💬 HOYN! Anonymous QR</h2>
+        <canvas id="qr2"></canvas>
+        <div class="qr-data" id="data2"></div>
+    </div>
+
+    <div class="qr-container">
+        <h2>🔗 HOYN! Custom QR</h2>
+        <canvas id="qr3"></canvas>
+        <div class="qr-data" id="data3"></div>
+    </div>
+
+    <div class="qr-container">
+        <h2>🌐 HOYN! URL QR</h2>
+        <canvas id="qr4"></canvas>
+        <div class="qr-data" id="data4"></div>
+    </div>
+
+    <div class="qr-container">
+        <h2>📱 Regular QR Code</h2>
+        <canvas id="qr5"></canvas>
+        <div class="qr-data" id="data5"></div>
+    </div>
+
+    <script>
+        function generateQR(canvasId, dataId, data) {
+            const qr = qrcode(0, 'M');
+            qr.addData(data);
+            qr.make();
+            
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const size = 200;
+            canvas.width = size;
+            canvas.height = size;
+            
+            const moduleCount = qr.getModuleCount();
+            const cellSize = size / moduleCount;
+            
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, size, size);
+            
+            ctx.fillStyle = '#E040FB';
+            for (let row = 0; row < moduleCount; row++) {
+                for (let col = 0; col < moduleCount; col++) {
+                    if (qr.isDark(row, col)) {
+                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+            
+            document.getElementById(dataId).textContent = data;
+        }
+
+        // HOYN! Profile QR
+        const profileQR = JSON.stringify({
+            hoyn: true,
+            type: 'profile',
+            username: 'testuser',
+            url: 'https://hoyn.app/testuser',
+            version: '1.0'
+        });
+
+        // HOYN! Anonymous QR
+        const anonymousQR = JSON.stringify({
+            hoyn: true,
+            type: 'anonymous',
+            username: 'testuser',
+            url: 'https://hoyn.app/testuser/anonymous',
+            version: '1.0'
+        });
+
+        // HOYN! Custom QR
+        const customQR = JSON.stringify({
+            hoyn: true,
+            type: 'custom',
+            username: 'testuser',
+            url: 'https://example.com',
+            version: '1.0'
+        });
+
+        // HOYN! URL QR
+        const urlQR = 'https://hoyn.app/testuser';
+
+        // Regular QR
+        const regularQR = 'https://www.google.com';
+
+        // Generate all QR codes
+        generateQR('qr1', 'data1', profileQR);
+        generateQR('qr2', 'data2', anonymousQR);
+        generateQR('qr3', 'data3', customQR);
+        generateQR('qr4', 'data4', urlQR);
+        generateQR('qr5', 'data5', regularQR);
+    </script>
+</body>
+</html>
