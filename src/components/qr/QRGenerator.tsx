@@ -360,6 +360,29 @@ export default function QRGenerator({ className = '' }: QRGeneratorProps) {
               )}
             </div>
 
+            {/* Generate QR Button */}
+            <div>
+              <NeonButton
+                onClick={qr.generateQR}
+                variant="primary"
+                size="lg"
+                glow
+                disabled={qr.qrState.isGenerating || (qr.qrState.type === 'custom' && !qr.qrState.customValue.trim())}
+                className="w-full"
+              >
+                {qr.qrState.isGenerating ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" strokeDasharray="32" strokeLinecap="round" />
+                    </svg>
+                    QR Oluşturuluyor...
+                  </span>
+                ) : (
+                  '🎯 QR Oluştur'
+                )}
+              </NeonButton>
+            </div>
+
             {/* Preset Colors */}
             <div>
               <label className="block text-lg font-bold text-purple-300 mb-3">Hazır Temalar</label>

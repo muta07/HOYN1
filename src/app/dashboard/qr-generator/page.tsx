@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getUserDisplayName } from '@/lib/qr-utils';
-import QRGenerator from '@/components/qr/QRGenerator';
+import QRGenerator from '@/components/qr';
 import Loading from '@/components/ui/Loading';
 
 export default function QRGeneratorPage() {

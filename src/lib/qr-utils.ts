@@ -274,8 +274,8 @@ export function parseHOYNQR(data: string): QRData | null {
  */
 export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' = 'profile'): string {
   const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://hoyn.app' 
-    : 'http://localhost:3000';
+    ? 'https://hoyn-1.vercel.app' 
+    : `http://localhost:${process.env.PORT || 3000}`;
     
   const url = type === 'profile' 
     ? `${baseUrl}/u/${username}` 

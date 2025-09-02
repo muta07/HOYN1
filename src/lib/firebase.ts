@@ -42,14 +42,14 @@ export interface BusinessProfile {
 
 // Firebase yapılandırması (Firebase v7.20.0+ uyumlu)
 const firebaseConfig = {
-  apiKey: "AIzaSyDJN3wqeaNxmk9l1I3Lg3KD8r2G6ziMZxM",
-  authDomain: "hoyn-demo.firebaseapp.com",
-  databaseURL: "https://hoyn-demo-default-rtdb.firebaseio.com",
-  projectId: "hoyn-demo",
-  storageBucket: "hoyn-demo.firebasestorage.app",
-  messagingSenderId: "818752786451",
-  appId: "1:818752786451:web:d3dc938ad4ee898a9d6fe6",
-  measurementId: "G-HQ6KYZZPQG"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDJN3wqeaNxmk9l1I3Lg3KD8r2G6ziMZxM",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "hoyn-demo.firebaseapp.com",
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://hoyn-demo-default-rtdb.firebaseio.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "hoyn-demo",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "hoyn-demo.firebasestorage.app",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "818752786451",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:818752786451:web:d3dc938ad4ee898a9d6fe6",
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-HQ6KYZZPQG"
 };
 
 // Firebase başlat
