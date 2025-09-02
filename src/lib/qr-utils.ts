@@ -277,14 +277,21 @@ export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' =
     ? 'https://hoyn.app' 
     : 'http://localhost:3000';
     
-  switch (type) {
-    case 'profile':
-      return `${baseUrl}/u/${username}`;
-    case 'anonymous':
-      return `${baseUrl}/ask/${username}`;
-    default:
-      return `${baseUrl}/u/${username}`;
-  }
+  const url = type === 'profile' 
+    ? `${baseUrl}/u/${username}` 
+    : `${baseUrl}/ask/${username}`;
+    
+  // Create HOYN! formatted QR JSON
+  const hoynData = {
+    hoyn: true,
+    type: type,
+    url: url,
+    username: username,
+    createdAt: new Date().toISOString(),
+    version: '1.0'
+  };
+  
+  return JSON.stringify(hoynData);
 }
 
 /**

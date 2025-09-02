@@ -106,6 +106,17 @@ export default function QRGeneratorPage() {
         return;
       }
       
+      // Debug: Log QR generation details
+      console.log('🎯 QR Generation Started:', {
+        qrType,
+        username,
+        customValue,
+        displayName
+      });
+      
+      const qrValue = getQRValue();
+      console.log('📱 Generated QR Value:', qrValue);
+      
       // Simulate generation process
       await new Promise(resolve => setTimeout(resolve, 1000));
       
@@ -113,10 +124,11 @@ export default function QRGeneratorPage() {
       
       // Success message
       const qrTypeText = qrType === 'profile' ? 'Profil' : qrType === 'anonymous' ? 'Anonim Mesaj' : 'Özel';
+      console.log('✅ QR Generated Successfully!');
       alert(`✨ ${qrTypeText} QR kodu başarıyla oluşturuldu!`);
       
     } catch (error) {
-      console.error('QR Generation error:', error);
+      console.error('❌ QR Generation error:', error);
       alert('QR oluştururken hata oluştu. Lütfen tekrar deneyin.');
     } finally {
       setIsGenerating(false);
