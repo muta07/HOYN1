@@ -87,7 +87,7 @@ export default function DesignerPage() {
 
         {/* Features */}
         <AnimatedCard direction="up" delay={200}>
-          <div className="grid md:grid-cols-3 gap-6 mb-12">
+          <div className="grid md:grid-cols-3 gap-6 mb-8">
             <div className="glass-effect p-6 rounded-xl cyber-border text-center hover:glow-subtle transition-all">
               <div className="text-4xl mb-3">🖱️</div>
               <h3 className="text-lg font-bold text-white mb-2">Sürükle & Bırak</h3>
@@ -104,6 +104,58 @@ export default function DesignerPage() {
               <div className="text-4xl mb-3">📱</div>
               <h3 className="text-lg font-bold text-white mb-2">Anında İndir</h3>
               <p className="text-gray-400 text-sm">Tasarımını PNG olarak hemen indir</p>
+            </div>
+          </div>
+        </AnimatedCard>
+
+        {/* QR Test Area */}
+        <AnimatedCard direction="up" delay={250}>
+          <div className="glass-effect p-6 rounded-xl cyber-border text-center">
+            <h3 className="text-xl font-bold text-white mb-4">🔍 QR Kodu Test Et</h3>
+            <p className="text-gray-400 mb-4">QR kodunu burada test edebilir, AI sanatı ile geliştirebilirsin!</p>
+            
+            <div className="flex flex-wrap gap-3 justify-center">
+              <NeonButton
+                onClick={() => {
+                  if (userQRCode) {
+                    window.open(`data:text/plain,${userQRCode}`, '_blank');
+                  }
+                }}
+                variant="outline"
+                size="md"
+                disabled={!userQRCode}
+              >
+                🔗 QR Kodu Göster
+              </NeonButton>
+              
+              <NeonButton
+                onClick={() => {
+                  // Basit bir AI QR demo için test product oluştur
+                  const testProduct: Product = {
+                    id: 'test',
+                    name: 'AI QR Test',
+                    price: 'Test Mode',
+                    mockupFront: '/api/placeholder/400/400',
+                    colors: [{ name: 'Test', hex: '#000000' }],
+                    sizes: ['Test'],
+                    category: 'test',
+                    description: 'AI QR sanatı test modu'
+                  };
+                  setSelectedProduct(testProduct);
+                }}
+                variant="primary"
+                size="md"
+                disabled={!userQRCode}
+                glow
+              >
+                🎨 AI QR Sanat Test Et
+              </NeonButton>
+            </div>
+            
+            <div className="mt-4 p-3 bg-gray-800/50 rounded-lg">
+              <p className="text-xs text-gray-400">
+                QR: <span className="font-mono">{userQRCode}</span>
+              </p>
             </div>
           </div>
         </AnimatedCard>
