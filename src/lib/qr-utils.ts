@@ -1,12 +1,164 @@
 // src/lib/qr-utils.ts
 // @ts-ignore - DOMPurify types
 import DOMPurify from 'isomorphic-dompurify';
+import { User } from 'firebase/auth';
+import { UserProfile, BusinessProfile, db } from './firebase';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface QRData {
   type: 'profile' | 'anonymous' | 'custom';
   username?: string;
   url?: string;
   data?: any;
+}
+
+/**
+ * Gets user display name with nickname priority (supports both user and business)
+ */
+export function getUserDisplayName(user: User | null, profile?: UserProfile | BusinessProfile | null): string {
+  if (!user) return 'kullanıcı';
+  
+  // Önce profile'dan nickname'e bak
+  if (profile?.nickname && profile.nickname.trim()) {
+    return profile.nickname.trim();
+  }
+  
+  // Sonra displayName'e bak (kayıt sırasında ayarlanan gerçek ad)
+  if (user.displayName && user.displayName.trim()) {
+    return user.displayName.trim();
+  }
+  
+  // Email varsa @ işaretinden öncesini al
+  if (user.email) {
+    return user.email.split('@')[0];
+  }
+  
+  return 'kullanıcı';
+}
+
+/**
+ * Gets username for URL purposes (always from email)
+ */
+export function getUserUsername(user: User | null): string {
+  if (!user || !user.email) return '';
+  return user.email.split('@')[0];
+}
+
+/**
+ * Creates user profile in Firestore
+ */
+export async function createUserProfile(user: User, displayName: string, nickname?: string): Promise<UserProfile> {
+  const username = getUserUsername(user);
+  const profile: UserProfile = {
+    uid: user.uid,
+    email: user.email!,
+    displayName: displayName.trim(),
+    nickname: nickname?.trim() || displayName.trim(),
+    username,
+    createdAt: new Date(),
+    updatedAt: new Date()
+  };
+  
+  await setDoc(doc(db, 'users', user.uid), profile);
+  return profile;
+}
+
+/**
+ * Gets user profile from Firestore
+ */
+export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  try {
+    const docRef = doc(db, 'users', uid);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date()
+      } as UserProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting user profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Creates business profile in Firestore
+ */
+export async function createBusinessProfile(
+  user: User, 
+  companyName: string, 
+  ownerName: string,
+  nickname: string,
+  businessType: string,
+  address?: string,
+  phone?: string,
+  website?: string,
+  description?: string
+): Promise<BusinessProfile> {
+  const username = getUserUsername(user);
+  const profile: BusinessProfile = {
+    uid: user.uid,
+    email: user.email!,
+    companyName: companyName.trim(),
+    ownerName: ownerName.trim(),
+    nickname: nickname?.trim() || companyName.trim(),
+    businessType: businessType.trim(),
+    address: address?.trim(),
+    phone: phone?.trim(),
+    website: website?.trim(),
+    description: description?.trim(),
+    username,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isVerified: false
+  };
+  
+  await setDoc(doc(db, 'businesses', user.uid), profile);
+  return profile;
+}
+
+/**
+ * Gets business profile from Firestore
+ */
+export async function getBusinessProfile(uid: string): Promise<BusinessProfile | null> {
+  try {
+    const docRef = doc(db, 'businesses', uid);
+    const docSnap = await getDoc(docRef);
+    
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      return {
+        ...data,
+        createdAt: data.createdAt?.toDate() || new Date(),
+        updatedAt: data.updatedAt?.toDate() || new Date()
+      } as BusinessProfile;
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting business profile:', error);
+    return null;
+  }
+}
+
+/**
+ * Updates business profile nickname
+ */
+export async function updateBusinessNickname(uid: string, nickname: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'businesses', uid);
+    await updateDoc(docRef, {
+      nickname: nickname.trim(),
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error updating business nickname:', error);
+    throw error;
+  }
 }
 
 /**

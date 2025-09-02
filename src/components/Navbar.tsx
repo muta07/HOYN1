@@ -3,12 +3,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getUserDisplayName } from '@/lib/qr-utils';
 import { ROUTES } from '@/lib/constants';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
 export default function Navbar() {
-  const { user, loading, logout } = useAuth();
+  const { user, profile, loading, logout } = useAuth();
   const router = useRouter();
 
   const handleLogoClick = () => {
@@ -42,7 +43,7 @@ export default function Navbar() {
           ) : user ? (
             <>
               <span className="text-purple-300 text-sm font-orbitron">
-                Merhaba, {user.displayName || user.email}
+                Merhaba, {getUserDisplayName(user, profile)}
               </span>
               <NeonButton
                 onClick={() => router.push('/dashboard')}

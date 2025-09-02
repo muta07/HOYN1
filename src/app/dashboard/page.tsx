@@ -4,11 +4,12 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { getUserDisplayName } from '@/lib/qr-utils';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
 export default function DashboardPage() {
-  const { user, loading, logout } = useAuth();
+  const { user, profile, accountType, loading, logout } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
@@ -36,8 +37,8 @@ export default function DashboardPage() {
 
   if (!user) return null;
 
-  const username = user.displayName || 
-    (user.email ? user.email.split('@')[0] : 'kullanici');
+  const username = getUserDisplayName(user, profile);
+  const isBusinessAccount = accountType === 'business';
 
   return (
     <div className="min-h-screen bg-black text-white py-24 px-6">
@@ -46,13 +47,13 @@ export default function DashboardPage() {
         <div className="text-center mb-16">
           <h1 className="text-6xl font-black glow-text font-orbitron mb-4 float
                          bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            HOYN! Panel
+            {isBusinessAccount ? 'HOYN! Business' : 'HOYN! Panel'}
           </h1>
           <p className="text-xl text-gray-300 mb-4">
             Hoş geldin, <span className="text-purple-400 font-bold glow-text">{username}</span>!
           </p>
           <p className="text-purple-300">
-            Kimliğini paylaşmaya hazır mısın? 🚀
+            {isBusinessAccount ? 'İşletmeni dijital dünyaya taşımaya hazır mısın? 🚀' : 'Kimliğini paylaşmaya hazır mısın? 🚀'}
           </p>
         </div>
 
@@ -62,10 +63,13 @@ export default function DashboardPage() {
                onClick={() => router.push('/dashboard/qr-generator')}>
             <div className="text-6xl mb-4 float">✨</div>
             <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
-              QR Kod Oluştur
+              {isBusinessAccount ? 'Business QR Oluştur' : 'QR Kod Oluştur'}
             </h2>
             <p className="text-gray-300 mb-6">
-              Kim olduğunu bir QR ile anlat. Tişörtüne bas, telefonuna yapıştır, dünyaya göster.
+              {isBusinessAccount 
+                ? 'İşletme QR’ını oluştur. Menü, iletişim, geri bildirim için kullan.'
+                : 'Kim olduğunu bir QR ile anlat. Tişörtüne bas, telefonuna yapıştır, dünyaya göster.'
+              }
             </p>
             <NeonButton variant="primary" size="md" glow>
               🚀 QR Oluştur
@@ -74,15 +78,18 @@ export default function DashboardPage() {
 
           <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
                onClick={() => router.push('/dashboard/profile')}>
-            <div className="text-6xl mb-4 float">👤</div>
+            <div className="text-6xl mb-4 float">{isBusinessAccount ? '🏢' : '👤'}</div>
             <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
-              Profilini Yönet
+              {isBusinessAccount ? 'İşletme Profilini Yönet' : 'Profilini Yönet'}
             </h2>
             <p className="text-gray-300 mb-6">
-              Bio, sosyal medya, anonim soru ayarları – kim olduğunu özelleştir.
+              {isBusinessAccount
+                ? 'Şirket bilgileri, menü, çalışanlar – işletmeni özelleştir.'
+                : 'Bio, sosyal medya, anonim soru ayarları – kim olduğunu özelleştir.'
+              }
             </p>
             <NeonButton variant="secondary" size="md">
-              ⚙️ Profil Ayarları
+              ⚙️ {isBusinessAccount ? 'İşletme' : 'Profil'} Ayarları
             </NeonButton>
           </div>
         </div>

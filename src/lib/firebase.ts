@@ -4,6 +4,42 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 
+// User Profile Interface
+export interface UserProfile {
+  uid: string;
+  email: string;
+  displayName: string; // Gerçek ad
+  nickname: string;    // Takma ad
+  bio?: string;
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  username: string;    // Email'den türetilen unique username
+}
+
+// Business Profile Interface
+export interface BusinessProfile {
+  uid: string;
+  email: string;
+  companyName: string;
+  ownerName: string;
+  nickname: string;    // Business nickname/brand name
+  businessType: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  description?: string;
+  avatar?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  username: string;    // Email'den türetilen unique username
+  // Business specific fields
+  employees?: string[];
+  menuItems?: any[];
+  qrCodes?: string[];
+  isVerified?: boolean;
+}
+
 // Firebase yapılandırması (Firebase v7.20.0+ uyumlu)
 const firebaseConfig = {
   apiKey: "AIzaSyDJN3wqeaNxmk9l1I3Lg3KD8r2G6ziMZxM",

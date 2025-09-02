@@ -3,25 +3,23 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function PersonalRegisterPage() {
   const [name, setName] = useState('');
+  const [nickname, setNickname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [bio, setBio] = useState('');
-  const [loading, setLoading] = useState(false);
+  const { registerWithEmail, loading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
 
     try {
-      // Firebase Authentication ile kullanıcı oluştur
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
+      // useAuth hook'unu kullanarak kullanıcı oluştur ve displayName ile nickname'i ayarla
+      await registerWithEmail(email, password, name, nickname || name);
 
       // Burada kullanıcı verisini Firestore veya Realtime DB'ye kaydet
       // Örnek (ileride genişletilecek):
@@ -36,7 +34,6 @@ export default function PersonalRegisterPage() {
       router.push('/dashboard');
     } catch (error: any) {
       alert('Kayıt başarısız: ' + error.message);
-      setLoading(false);
     }
   };
 
@@ -55,6 +52,14 @@ export default function PersonalRegisterPage() {
           onChange={(e) => setName(e.target.value)}
           className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg mb-4"
           required
+        />
+
+        <input
+          type="text"
+          placeholder="Takma Ad (Nickname) - İsteğe bağlı"
+          value={nickname}
+          onChange={(e) => setNickname(e.target.value)}
+          className="w-full p-3 bg-gray-900 border border-gray-700 rounded-lg mb-4"
         />
 
         <input

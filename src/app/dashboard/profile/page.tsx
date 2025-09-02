@@ -4,13 +4,17 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
+import { getUserDisplayName, getUserUsername, updateUserNickname } from '@/lib/qr-utils';
+import NeonButton from '@/components/ui/NeonButton';
+import Loading from '@/components/ui/Loading';
 
 export default function ProfilePage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
 
-  const [name, setName] = useState('Kullanıcı');
-  const [bio, setBio] = useState('Bu kişi hakkında hiçbir şey bilinmiyor.');
+  const [displayName, setDisplayName] = useState('');
+  const [nickname, setNickname] = useState('');
+  const [bio, setBio] = useState('');
   const [instagram, setInstagram] = useState('');
   const [twitter, setTwitter] = useState('');
   const [allowAnonymous, setAllowAnonymous] = useState(true);
@@ -23,10 +27,23 @@ export default function ProfilePage() {
     }
   }, [user, authLoading, router]);
 
+  // Profil yüklenince formu doldur
+  useEffect(() => {
+    if (profile) {
+      setDisplayName(profile.displayName || '');
+      setNickname(profile.nickname || '');
+      setBio(profile.bio || '');
+    } else if (user) {
+      setDisplayName(user.displayName || '');
+      setNickname('');
+      setBio('');
+    }
+  }, [profile, user]);
+
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        Yükleniyor...
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Profil yükleniyor..." />
       </div>
     );
   }
@@ -34,10 +51,25 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const handleSave = async () => {
+    if (!user) return;
+    
     setLoading(true);
-    // Burada verileri Firebase'e kaydet (ileride src/lib/api.ts ile yapılacak)
-    alert('Profil bilgileri kaydedildi!');
-    setLoading(false);
+    try {
+      // Nickname'i güncelle
+      if (nickname.trim() !== profile?.nickname) {
+        await updateUserNickname(user.uid, nickname.trim() || displayName);
+      }
+      
+      // Burada diğer verileri de Firebase'e kaydet (ileride src/lib/api.ts ile yapılacak)
+      alert('Profil bilgileri kaydedildi!');
+      
+      // Profili yeniden yükle
+      window.location.reload();
+    } catch (error) {
+      alert('Profil kaydedilemedi: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -53,12 +85,29 @@ export default function ProfilePage() {
             <h2 className="text-2xl font-bold text-white mb-6">Bilgilerin</h2>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Ad Soyad</label>
+                <label className="block text-sm font-medium text-gray-300 mb-1">Gerçek Ad</label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
                   className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                  placeholder="Ad Soyad"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-purple-300 mb-1">
+                  <span className="font-bold">Takma Ad (Nickname)</span>
+                  <span className="text-xs block text-gray-400 mt-1">
+                    Bu ad her yerde görünür. Boş bırakırsan gerçek adın kullanılır.
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                  className="w-full p-3 bg-purple-900/20 border border-purple-500/50 rounded-lg text-white focus:border-purple-400 transition-colors"
+                  placeholder={displayName || 'Muta, Talha, vs...'}
                 />
               </div>
 
@@ -106,33 +155,43 @@ export default function ProfilePage() {
                 </label>
               </div>
 
-              <button
+              <NeonButton
                 onClick={handleSave}
                 disabled={loading}
-                type="button"
-                className="w-full mt-6 bg-gradient-to-r from-purple-600 to-pink-600 py-3 rounded-lg font-bold disabled:opacity-70"
+                variant="primary"
+                size="lg"
+                glow
+                className="w-full"
               >
-                {loading ? 'Kaydediliyor...' : 'Değişiklikleri Kaydet'}
-              </button>
+                {loading ? 'Kaydediliyor...' : '✨ Değişiklikleri Kaydet'}
+              </NeonButton>
             </form>
           </div>
 
           {/* Sağ: QR Önizleme */}
           <div className="bg-gray-900 p-8 rounded-xl border border-purple-900 flex flex-col items-center">
-            <h2 className="text-2xl font-bold text-white mb-6">QR Kodun</h2>
+            <h2 className="text-2xl font-bold text-white mb-6">Profil Önizleme</h2>
             <div className="p-6 bg-white rounded-xl mb-4">
               {/* Placeholder QR Code */}
               <div className="w-48 h-48 bg-black flex items-center justify-center text-white font-bold">
                 QR KOD
               </div>
             </div>
-            <p className="text-gray-300 text-center mb-4">
-              Bu QR'ı taramak, {name || 'seni'} tanımanı sağlar.
-            </p>
+            <div className="text-center space-y-2">
+              <p className="text-lg font-bold text-purple-300">
+                {getUserDisplayName(user, profile)}
+              </p>
+              <p className="text-sm text-gray-400">
+                @{getUserUsername(user)}
+              </p>
+              <p className="text-gray-300 text-sm mt-4">
+                Bu QR'ı taramak, seni tanımanı sağlar.
+              </p>
+            </div>
             <a
-              href={`/ask/${user.email?.split('@')[0]}`}
+              href={`/ask/${getUserUsername(user)}`}
               target="_blank"
-              className="text-purple-400 hover:underline text-sm"
+              className="text-purple-400 hover:text-purple-300 text-sm hover:underline transition-colors"
             >
               → Anonim mesaj gönder
             </a>
@@ -141,12 +200,13 @@ export default function ProfilePage() {
 
         {/* Geri Dön Butonu */}
         <div className="text-center mt-8">
-          <button
+          <NeonButton
             onClick={() => router.push('/dashboard')}
-            className="text-gray-400 hover:text-white transition"
+            variant="outline"
+            size="md"
           >
             ← Panele Dön
-          </button>
+          </NeonButton>
         </div>
       </div>
     </div>

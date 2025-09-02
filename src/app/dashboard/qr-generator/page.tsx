@@ -1,4 +1,3 @@
-// src/app/dashboard/qr-generator/page.tsx
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -8,10 +7,10 @@ import QRCodeWrapper from '@/components/qr/QRCodeWrapper';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import AnimatedCard from '@/components/ui/AnimatedCard';
-import { downloadQRCode, generateHOYNQR } from '@/lib/qr-utils';
+import { downloadQRCode, generateHOYNQR, getUserDisplayName, getUserUsername } from '@/lib/qr-utils';
 
 export default function QRGeneratorPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -29,7 +28,8 @@ export default function QRGeneratorPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
 
   // Generate QR value based on type
-  const username = user?.displayName || (user?.email ? user.email.split('@')[0] : 'user');
+  const displayName = getUserDisplayName(user, profile);
+  const username = getUserUsername(user);
   
   const getQRValue = () => {
     switch (qrType) {
@@ -38,7 +38,19 @@ export default function QRGeneratorPage() {
       case 'anonymous':
         return generateHOYNQR(username, 'anonymous');
       case 'custom':
-        return customValue || `https://hoyn.app/u/${username}`;
+        // Custom değer girilmişse onu kullan, yoksa varsayılan profil URL'i
+        if (customValue && customValue.trim()) {
+          // HOYN! formatında JSON wrapper oluştur
+          const hoynCustomData = {
+            hoyn: true,
+            type: 'custom',
+            url: customValue.trim(),
+            username: username,
+            createdAt: new Date().toISOString()
+          };
+          return JSON.stringify(hoynCustomData);
+        }
+        return generateHOYNQR(username, 'profile');
       default:
         return generateHOYNQR(username, 'profile');
     }
@@ -124,7 +136,7 @@ export default function QRGeneratorPage() {
             Kimliğini QR'a dönüştür, her yere yapıştır!
           </p>
           <p className="text-purple-300">
-            Kullanıcı: <span className="font-bold text-white">{username}</span>
+            Kullanıcı: <span className="font-bold text-white">{displayName}</span>
           </p>
         </div>
 
@@ -196,8 +208,9 @@ export default function QRGeneratorPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">👤</span>
                       <div>
-                        <h3 className="font-bold text-white">Profil QR'ı</h3>
-                        <p className="text-sm text-gray-400">hoyn.app/u/{username}</p>
+                        <h3 className="font-bold text-white">Profil QR'ı 🎆</h3>
+                        <p className="text-sm text-gray-400">HOYN! Profil - hoyn.app/u/{username}</p>
+                        <p className="text-xs text-purple-300 mt-1">Profil sayfanı açar</p>
                       </div>
                     </div>
                   </button>
@@ -213,8 +226,9 @@ export default function QRGeneratorPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">💬</span>
                       <div>
-                        <h3 className="font-bold text-white">Anonim Soru QR'ı</h3>
-                        <p className="text-sm text-gray-400">hoyn.app/ask/{username}</p>
+                        <h3 className="font-bold text-white">Anonim Soru QR'ı 💬</h3>
+                        <p className="text-sm text-gray-400">HOYN! Mesaj - hoyn.app/ask/{username}</p>
+                        <p className="text-xs text-purple-300 mt-1">Sana anonim mesaj gönderir</p>
                       </div>
                     </div>
                   </button>
@@ -230,8 +244,9 @@ export default function QRGeneratorPage() {
                     <div className="flex items-center gap-3">
                       <span className="text-2xl">🔗</span>
                       <div>
-                        <h3 className="font-bold text-white">Özel Link</h3>
-                        <p className="text-sm text-gray-400">Kendi URL'ini gir</p>
+                        <h3 className="font-bold text-white">Özel HOYN! QR 🔗</h3>
+                        <p className="text-sm text-gray-400">HOYN! formatında özel link</p>
+                        <p className="text-xs text-purple-300 mt-1">Kendi URL'ini HOYN! ile wrap'ler</p>
                       </div>
                     </div>
                   </button>
@@ -241,16 +256,29 @@ export default function QRGeneratorPage() {
               {/* Custom URL Input */}
               {qrType === 'custom' && (
                 <div>
-                  <label className="block text-lg font-bold text-purple-300 mb-3">Özel URL</label>
+                  <label className="block text-lg font-bold text-purple-300 mb-3">
+                    Özel URL 🔗
+                    <span className="block text-sm text-gray-400 font-normal mt-1">
+                      URL'in HOYN! formatında QR'a dönüştürülür. HOYN! tarayıcılar tarafından tanınacaktır.
+                    </span>
+                  </label>
                   <input
                     type="url"
                     value={customValue}
                     onChange={(e) => setCustomValue(e.target.value)}
-                    placeholder="https://example.com"
+                    placeholder="https://instagram.com/kullaniciadi"
                     className="w-full p-4 bg-gray-800/50 border border-purple-500/30 rounded-lg
                                focus:border-purple-400 focus:outline-none transition-colors
                                text-white placeholder-gray-400 font-mono"
                   />
+                  <div className="mt-2 p-3 bg-purple-900/20 rounded-lg border border-purple-500/30">
+                    <p className="text-xs text-purple-200 mb-1">
+                      📝 QR İçeriği Önizlemesi:
+                    </p>
+                    <code className="text-xs text-gray-300 break-all">
+                      {customValue ? `HOYN! Custom: ${customValue}` : 'URL girin...'}
+                    </code>
+                  </div>
                 </div>
               )}
 
