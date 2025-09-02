@@ -1,0 +1,220 @@
+// src/components/qr/CanvasQRCode.tsx
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import QRCode from 'qrcode';
+import { useTheme } from 'next-themes';
+
+interface CanvasQRCodeProps {
+  value: string;
+  size?: number;
+  bgColor?: string;
+  fgColor?: string;
+  logo?: string;
+  className?: string;
+}
+
+export default function CanvasQRCode({
+  value,
+  size = 256,
+  bgColor = '#000000',
+  fgColor = '#E040FB',
+  logo,
+  className = ''
+}: CanvasQRCodeProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const { theme } = useTheme();
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Validate QR value
+  useEffect(() => {
+    setError(null);
+    if (!value || value.trim() === '') {
+      setError('QR değeri geçersiz');
+    }
+  }, [value]);
+
+  // Initialize canvas
+  useEffect(() => {
+    if (!isInitialized && canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        // Set fixed canvas size
+        canvas.width = size;
+        canvas.height = size;
+        
+        // Initial background
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, size, size);
+        
+        setIsInitialized(true);
+      }
+    }
+  }, [size, bgColor, isInitialized]);
+
+  // Generate QR code
+  useEffect(() => {
+    const drawQRCode = async () => {
+      if (error || !value || !canvasRef.current || !isInitialized) {
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+      
+      try {
+        const canvas = canvasRef.current;
+        const canvasContext = canvas.getContext('2d');
+        
+        if (!canvasContext) {
+          throw new Error('Canvas context oluşturulamadı');
+        }
+
+        // Clear previous content
+        canvasContext.clearRect(0, 0, size, size);
+        canvasContext.fillStyle = bgColor;
+        canvasContext.fillRect(0, 0, size, size);
+        
+        // Generate QR code with custom colors
+        const qrCanvas = await QRCode.toCanvas(value, {
+          width: size,
+          color: {
+            dark: fgColor,
+            light: bgColor
+          }
+        });
+        
+        // Draw the QR code on our canvas
+        canvasContext.drawImage(qrCanvas, 0, 0, size, size);
+        
+        // Add logo if provided
+        if (logo) {
+          const logoImage = new Image();
+          logoImage.src = logo;
+          
+          logoImage.onload = () => {
+            try {
+              const logoSize = size * 0.2;
+              const x = (size - logoSize) / 2;
+              const y = (size - logoSize) / 2;
+              
+              // Clear center area for logo
+              canvasContext.fillStyle = bgColor;
+              canvasContext.fillRect(x, y, logoSize, logoSize);
+              
+              // Draw logo
+              canvasContext.drawImage(logoImage, x, y, logoSize, logoSize);
+            } catch (err) {
+              console.error('Logo çizim hatası:', err);
+              setError('Logo eklenemedi');
+            }
+          };
+          
+          logoImage.onerror = () => {
+            console.error('Logo yükleme hatası');
+            setError('Logo yüklenemedi');
+          };
+        }
+      } catch (error) {
+        console.error('QR kodu oluşturma hatası:', error);
+        setError('QR kodu oluşturulamadı');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    drawQRCode();
+  }, [value, size, bgColor, fgColor, logo, isInitialized, error]);
+
+  const downloadQR = () => {
+    if (error) {
+      console.error('QR indirme hatası: QR kodu oluşturulamadı');
+      setError('QR indirilemedi: QR kodu oluşturulamadı');
+      return;
+    }
+    
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      console.error('Canvas bulunamadı');
+      setError('QR indirilemedi: Canvas bulunamadı');
+      return;
+    }
+    
+    try {
+      const link = document.createElement('a');
+      link.href = canvas.toDataURL('image/png');
+      link.download = `hoyn-qr-${Date.now()}.png`;
+      link.click();
+    } catch (error) {
+      console.error('QR indirme hatası:', error);
+      setError('QR indirilemedi. Lütfen tekrar deneyin.');
+    }
+  };
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className={className}>
+        <div className="flex items-center justify-center glass-effect rounded-lg cyber-border" style={{ width: size, height: size }}>
+          <div className="text-2xl animate-pulse">⏳</div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className={className}>
+        <div className={`flex flex-col items-center justify-center glass-effect rounded-lg cyber-border border-red-500/50`} style={{ width: size, height: size }}>
+          <div className="text-4xl mb-2 text-red-400">⚠️</div>
+          <p className="text-red-300 text-sm text-center px-4">{error}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 px-3 py-1 bg-red-900/30 text-red-300 rounded hover:bg-red-900"
+          >
+            Yeniden Dene
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className={className}>
+      <div className="relative">
+        <canvas 
+          ref={canvasRef} 
+          width={size} 
+          height={size}
+          className="rounded-lg cyber-border"
+        />
+        
+        {/* Cyberpunk Border Glow */}
+        <div className="absolute inset-0 rounded-lg border-2 border-purple-500/30 opacity-50 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none glow-subtle"></div>
+        
+        {/* Success indicator */}
+        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
+          <span className="text-white text-xs font-bold">✓</span>
+        </div>
+        
+        {/* QR Info Badge */}
+        <div className="absolute -bottom-6 left-0 right-0 text-center">
+          <span className="inline-block bg-purple-900/80 text-purple-200 text-xs px-2 py-1 rounded-full">
+            HOYN! QR • {size}px
+          </span>
+        </div>
+      </div>
+      
+      <button
+        onClick={downloadQR}
+        className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all transform hover:scale-105 shadow-lg"
+      >
+        📦 QR İndir
+      </button>
+    </div>
+  );
+}
