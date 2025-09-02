@@ -162,6 +162,22 @@ export async function updateBusinessNickname(uid: string, nickname: string): Pro
 }
 
 /**
+ * Updates user profile nickname
+ */
+export async function updateUserNickname(uid: string, nickname: string): Promise<void> {
+  try {
+    const docRef = doc(db, 'users', uid);
+    await updateDoc(docRef, {
+      nickname: nickname.trim(),
+      updatedAt: new Date()
+    });
+  } catch (error) {
+    console.error('Error updating user nickname:', error);
+    throw error;
+  }
+}
+
+/**
  * Validates QR code data for security
  */
 export function validateQRData(data: string): boolean {
