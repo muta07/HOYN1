@@ -3,9 +3,9 @@
 
 import { useEffect, useState, memo, useRef } from 'react';
 import Loading from '@/components/ui/Loading';
-import CanvasQRCode from './CanvasQRCode';
+import CanvasQRCode, { CanvasQRCodeProps } from './CanvasQRCode';
 
-interface QRCodeWrapperProps {
+interface QRCodeWrapperProps extends Omit<CanvasQRCodeProps, 'onReady' | 'onError'> {
   value: string;
   size?: number;
   bgColor?: string;
@@ -49,9 +49,9 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
   if (!isClient || isLoading) {
     return (
       <div 
-        className={`flex items-center justify-center glass-effect rounded-lg cyber-border ${className}`}
-        style={{ width: size, height: size }}
-      >
+      className={`flex items-center justify-center glass-effect rounded-lg cyber-border ${className}`}
+      style={{ width: size, height: size }}
+    >
         <Loading size="md" text="QR hazırlanıyor..." />
       </div>
     );
@@ -78,8 +78,16 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
         bgColor={bgColor}
         fgColor={fgColor}
         logo={logo}
-        onReady={onReady}
-        onError={onError}
+        onReady={() => {
+          if (onReady) {
+            onReady();
+          }
+        }}
+        onError={(err) => {
+          if (onError) {
+            onError(err);
+          }
+        }}
       />
     </div>
   );

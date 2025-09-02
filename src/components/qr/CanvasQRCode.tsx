@@ -12,6 +12,8 @@ interface CanvasQRCodeProps {
   fgColor?: string;
   logo?: string;
   className?: string;
+  onReady?: () => void;
+  onError?: (error: Error) => void;
 }
 
 export default function CanvasQRCode({
@@ -20,7 +22,9 @@ export default function CanvasQRCode({
   bgColor = '#000000',
   fgColor = '#E040FB',
   logo,
-  className = ''
+  className = '',
+  onReady,
+  onError
 }: CanvasQRCodeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { theme } = useTheme();
@@ -107,20 +111,40 @@ export default function CanvasQRCode({
               
               // Draw logo
               canvasContext.drawImage(logoImage, x, y, logoSize, logoSize);
+              
+              // Call onReady if provided
+              if (onReady) {
+                onReady();
+              }
             } catch (err) {
               console.error('Logo çizim hatası:', err);
               setError('Logo eklenemedi');
+              
+              // Call onError if provided
+              if (onError && err instanceof Error) {
+                onError(err);
+              }
             }
           };
           
           logoImage.onerror = () => {
             console.error('Logo yükleme hatası');
             setError('Logo yüklenemedi');
+            
+            // Call onError if provided
+            if (onError) {
+              onError(new Error('Logo yükleme hatası'));
+            }
           };
         }
       } catch (error) {
         console.error('QR kodu oluşturma hatası:', error);
         setError('QR kodu oluşturulamadı');
+        
+        // Call onError if provided
+        if (onError && error instanceof Error) {
+          onError(error);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -151,6 +175,11 @@ export default function CanvasQRCode({
     } catch (error) {
       console.error('QR indirme hatası:', error);
       setError('QR indirilemedi. Lütfen tekrar deneyin.');
+      
+      // Call onError if provided
+      if (onError && error instanceof Error) {
+        onError(error);
+      }
     }
   };
   
