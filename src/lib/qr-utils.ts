@@ -297,31 +297,184 @@ export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' =
 /**
  * Downloads QR code as image using html2canvas
  */
-export async function downloadQRCode(elementId: string, filename: string = 'hoyn-qr-code'): Promise<void> {
+export async function downloadQRCode(
+  elementId: string, 
+  filename: string = 'hoyn-qr-code',
+  format: 'png' | 'jpeg' = 'png'
+): Promise<void> {
   try {
-    // @ts-ignore - html2canvas types
-    const { default: html2canvas } = await import('html2canvas');
     const element = document.getElementById(elementId);
     
     if (!element) {
       throw new Error('QR code element not found');
     }
+
+    // First try with html2canvas
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      
+      const canvas = await html2canvas(element, {
+        backgroundColor: format === 'jpeg' ? '#FFFFFF' : null,
+        scale: 3, // Higher quality
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        height: element.offsetHeight,
+        width: element.offsetWidth,
+        onclone: (clonedDoc) => {
+          // Remove any problematic elements in clone
+          const clonedElement = clonedDoc.getElementById(elementId);
+          if (clonedElement) {
+            // Remove any absolute positioned elements that might cause issues
+            const problematicElements = clonedElement.querySelectorAll('[style*="absolute"]');
+            problematicElements.forEach(el => {
+              if (el.textContent?.includes('QR:') || el.textContent?.includes('✓')) {
+                el.remove();
+              }
+            });
+          }
+        }
+      });
+      
+      // Create download link
+      const link = document.createElement('a');
+      link.download = `${filename}.${format}`;
+      
+      if (format === 'jpeg') {
+        link.href = canvas.toDataURL('image/jpeg', 0.95);
+      } else {
+        link.href = canvas.toDataURL('image/png');
+      }
+      
+      // Trigger download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      console.log(`✅ QR Code downloaded as ${format.toUpperCase()}`);
+      
+    } catch (html2canvasError) {
+      console.warn('html2canvas failed, trying fallback method:', html2canvasError);
+      
+      // Fallback: Try to find SVG or Canvas directly
+      await downloadQRFallback(element, filename, format);
+    }
     
-    const canvas = await html2canvas(element, {
-      backgroundColor: '#000000',
-      scale: 2, // Higher quality
-      useCORS: true
-    });
-    
-    // Create download link
-    const link = document.createElement('a');
-    link.download = `${filename}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
   } catch (error) {
     console.error('Error downloading QR code:', error);
-    throw new Error('Failed to download QR code');
+    throw new Error(`QR indirme başarısız: ${(error as Error).message}`);
   }
+}
+
+// Fallback download method for CORS issues
+async function downloadQRFallback(
+  element: HTMLElement, 
+  filename: string, 
+  format: 'png' | 'jpeg'
+): Promise<void> {
+  try {
+    // Look for SVG or Canvas element
+    const svgElement = element.querySelector('svg');
+    const canvasElement = element.querySelector('canvas');
+    
+    if (canvasElement) {
+      // Direct canvas download
+      const link = document.createElement('a');
+      link.download = `${filename}.${format}`;
+      
+      if (format === 'jpeg') {
+        link.href = canvasElement.toDataURL('image/jpeg', 0.95);
+      } else {
+        link.href = canvasElement.toDataURL('image/png');
+      }
+      
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } else if (svgElement) {
+      // Convert SVG to canvas and download
+      await downloadSVGAsImage(svgElement, filename, format);
+      
+    } else {
+      throw new Error('No SVG or Canvas element found for fallback download');
+    }
+    
+    console.log(`✅ QR Code downloaded using fallback method as ${format.toUpperCase()}`);
+    
+  } catch (error) {
+    console.error('Fallback download failed:', error);
+    throw error;
+  }
+}
+
+// Convert SVG to image and download
+async function downloadSVGAsImage(
+  svgElement: SVGElement, 
+  filename: string, 
+  format: 'png' | 'jpeg'
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      const svgData = new XMLSerializer().serializeToString(svgElement);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const svgUrl = URL.createObjectURL(svgBlob);
+      
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          
+          if (!ctx) {
+            reject(new Error('Canvas context not available'));
+            return;
+          }
+          
+          canvas.width = img.width * 2; // Higher resolution
+          canvas.height = img.height * 2;
+          
+          // Set background for JPEG
+          if (format === 'jpeg') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          const link = document.createElement('a');
+          link.download = `${filename}.${format}`;
+          
+          if (format === 'jpeg') {
+            link.href = canvas.toDataURL('image/jpeg', 0.95);
+          } else {
+            link.href = canvas.toDataURL('image/png');
+          }
+          
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          
+          URL.revokeObjectURL(svgUrl);
+          resolve();
+          
+        } catch (error) {
+          URL.revokeObjectURL(svgUrl);
+          reject(error);
+        }
+      };
+      
+      img.onerror = () => {
+        URL.revokeObjectURL(svgUrl);
+        reject(new Error('Failed to load SVG as image'));
+      };
+      
+      img.src = svgUrl;
+      
+    } catch (error) {
+      reject(error);
+    }
+  });
 }
 
 /**

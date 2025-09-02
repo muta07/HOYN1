@@ -1,7 +1,7 @@
 // src/components/qr/QRCodeWrapper.tsx
 'use client';
 
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, memo, useRef } from 'react';
 import Loading from '@/components/ui/Loading';
 
 interface QRCodeWrapperProps {
@@ -11,6 +11,8 @@ interface QRCodeWrapperProps {
   fgColor?: string;
   logo?: string;
   className?: string;
+  onReady?: () => void;
+  onError?: (error: Error) => void;
 }
 
 const QRCodeWrapper = memo(function QRCodeWrapper({ 
@@ -19,10 +21,15 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
   bgColor = '#000000', 
   fgColor = '#E040FB',
   logo,
-  className = ''
+  className = '',
+  onReady,
+  onError
 }: QRCodeWrapperProps) {
   const [QRCodeComponent, setQRCodeComponent] = useState<any>(null);
   const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Client-side mounting
   useEffect(() => {
@@ -35,19 +42,38 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
     
     const loadQR = async () => {
       try {
+        setIsLoading(true);
+        setError(null);
+        
         const { default: QRCode } = await import('qrcode.react');
         setQRCodeComponent(() => QRCode);
-        console.log('✅ QR Component yüklendi!');
-      } catch (error) {
-        console.error('❌ QR yükleme hatası:', error);
+        
+        console.log('✅ QR Component loaded successfully');
+        onReady?.();
+      } catch (err) {
+        const error = err as Error;
+        console.error('❌ QR loading error:', error);
+        setError('QR component yüklenemedi');
+        onError?.(error);
+      } finally {
+        setIsLoading(false);
       }
     };
     
     loadQR();
-  }, [isClient]);
+  }, [isClient, onReady, onError]);
 
-  // Show loading until client-side and component loaded
-  if (!isClient || !QRCodeComponent) {
+  // Validate QR value
+  useEffect(() => {
+    if (!value || value.trim() === '') {
+      setError('QR değeri geçersiz');
+    } else {
+      setError(null);
+    }
+  }, [value]);
+
+  // Show loading state
+  if (!isClient || isLoading || !QRCodeComponent) {
     return (
       <div 
         className={`flex items-center justify-center glass-effect rounded-lg cyber-border ${className}`}
@@ -58,26 +84,42 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
     );
   }
 
-  console.log('🎨 QR Render ediliyor:', { value, size, QRCodeComponent: !!QRCodeComponent });
+  // Show error state
+  if (error) {
+    return (
+      <div 
+        className={`flex flex-col items-center justify-center glass-effect rounded-lg cyber-border border-red-500/50 ${className}`}
+        style={{ width: size, height: size }}
+      >
+        <div className="text-4xl mb-2 text-red-400">⚠️</div>
+        <p className="text-red-300 text-sm text-center px-4">{error}</p>
+      </div>
+    );
+  }
 
   const qrValue = value || 'https://hoyn.app';
+  const qrSize = size - 32; // Account for padding
 
   return (
-    <div className={`relative group ${className}`}>
+    <div className={`relative group ${className}`} id="qr-code-display">
       <div className="glass-effect p-4 rounded-lg cyber-border hover:glow-intense transition-all duration-300">
         <QRCodeComponent
           value={qrValue}
-          size={size - 32}
+          size={qrSize}
           bgColor={bgColor}
           fgColor={fgColor}
           level="H"
           includeMargin={true}
           imageSettings={logo ? {
             src: logo,
-            height: Math.min(40, (size - 32) * 0.2),
-            width: Math.min(40, (size - 32) * 0.2),
+            height: Math.min(40, qrSize * 0.15),
+            width: Math.min(40, qrSize * 0.15),
             excavate: true,
           } : undefined}
+          style={{
+            maxWidth: '100%',
+            height: 'auto'
+          }}
         />
       </div>
       
@@ -86,14 +128,24 @@ const QRCodeWrapper = memo(function QRCodeWrapper({
         <span className="text-white text-xs font-bold">✓</span>
       </div>
       
-      {/* Debug info */}
-      <div className="absolute -bottom-8 left-0 text-xs text-green-400">
-        QR: {qrValue.substring(0, 20)}...
+      {/* QR Info Badge */}
+      <div className="absolute -bottom-6 left-0 right-0 text-center">
+        <span className="inline-block bg-purple-900/80 text-purple-200 text-xs px-2 py-1 rounded-full">
+          HOYN! QR • {qrSize}px
+        </span>
       </div>
       
       {/* Floating effect on hover */}
       <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600/20 to-pink-600/20 
                       opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+      
+      {/* Hidden canvas for download functionality */}
+      <canvas
+        ref={canvasRef}
+        className="hidden"
+        width={qrSize}
+        height={qrSize}
+      />
     </div>
   );
 });
