@@ -3,9 +3,9 @@
 
 import { useEffect, useState, memo, useRef } from 'react';
 import Loading from '@/components/ui/Loading';
-import CanvasQRCode, { CanvasQRCodeProps } from './CanvasQRCode';
+import CanvasQRCode from './CanvasQRCode';
 
-interface QRCodeWrapperProps extends Omit<CanvasQRCodeProps, 'onReady' | 'onError'> {
+interface QRCodeWrapperProps {
   value: string;
   size?: number;
   bgColor?: string;
