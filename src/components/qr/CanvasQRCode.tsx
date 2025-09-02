@@ -31,6 +31,7 @@ export default function CanvasQRCode({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   // Validate QR value
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function CanvasQRCode({
     }
   }, [size, bgColor, isInitialized]);
 
-  // Generate QR code
+  // Generate QR code with progress indicator
   useEffect(() => {
     const drawQRCode = async () => {
       if (error || !value || !canvasRef.current || !isInitialized) {
@@ -68,6 +69,7 @@ export default function CanvasQRCode({
 
       setIsLoading(true);
       setError(null);
+      setProgress(0);
       
       try {
         const canvas = canvasRef.current;
@@ -82,6 +84,16 @@ export default function CanvasQRCode({
         canvasContext.fillStyle = bgColor;
         canvasContext.fillRect(0, 0, size, size);
         
+        // Add sand clock icon during loading
+        canvasContext.font = `${size * 0.2}px Orbitron`;
+        canvasContext.fillStyle = fgColor;
+        canvasContext.textAlign = 'center';
+        canvasContext.textBaseline = 'middle';
+        canvasContext.fillText('⏳', size / 2, size / 2);
+        
+        // Update progress
+        setProgress(30);
+        
         // Generate QR code with custom colors
         const qrCanvas = await QRCode.toCanvas(value, {
           width: size,
@@ -91,8 +103,17 @@ export default function CanvasQRCode({
           }
         });
         
+        // Update progress
+        setProgress(70);
+        
         // Draw the QR code on our canvas
+        canvasContext.clearRect(0, 0, size, size);
+        canvasContext.fillStyle = bgColor;
+        canvasContext.fillRect(0, 0, size, size);
         canvasContext.drawImage(qrCanvas, 0, 0, size, size);
+        
+        // Update progress
+        setProgress(100);
         
         // Add logo if provided
         if (logo) {
@@ -183,12 +204,30 @@ export default function CanvasQRCode({
     }
   };
   
-  // Show loading state
+  // Show loading state with sand clock icon
   if (isLoading) {
     return (
       <div className={className}>
-        <div className="flex items-center justify-center glass-effect rounded-lg cyber-border" style={{ width: size, height: size }}>
-          <div className="text-2xl animate-pulse">⏳</div>
+        <div className="flex items-center justify-center glass-effect rounded-lg cyber-border relative" style={{ width: size, height: size }}>
+          <canvas
+            ref={canvasRef}
+            width={size}
+            height={size}
+            className="rounded-lg cyber-border"
+          />
+          
+          {/* Sand clock icon animation */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-3xl animate-pulse">⏳</div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-full h-1 bg-purple-500/30 absolute top-0 left-0">
+                <div 
+                  className="h-full bg-purple-500 transition-all duration-300" 
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
