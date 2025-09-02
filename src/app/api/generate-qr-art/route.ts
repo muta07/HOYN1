@@ -23,21 +23,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use Hugging Face Inference API for QR Code generation
-    const response = await fetch("https://api-inference.huggingface.co/models/huggingface-projects/QR-code-AI-art-generator", {
+    // Use Hugging Face Inference API for text-to-image generation
+    const response = await fetch("https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2-1", {
       method: "POST",
       headers: {
         'Authorization': `Bearer ${HF_API_TOKEN}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        inputs: {
-          prompt: prompt,
-          qr_code_content: qr_code_content,
+        inputs: `${prompt}, QR code pattern, highly detailed, ${qr_code_content}`,
+        parameters: {
           num_inference_steps: num_inference_steps,
           guidance_scale: guidance_scale,
-          controlnet_conditioning_scale: 1.1,
-          seed: Math.floor(Math.random() * 1000000)
+          width: 512,
+          height: 512
         }
       }),
     });
