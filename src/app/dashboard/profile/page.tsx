@@ -30,9 +30,17 @@ export default function ProfilePage() {
   // Profil yüklenince formu doldur
   useEffect(() => {
     if (profile) {
-      setDisplayName(profile.displayName || '');
-      setNickname(profile.nickname || '');
-      setBio(profile.bio || '');
+      // Business profile check
+      if ('companyName' in profile) {
+        setDisplayName(profile.companyName || '');
+        setNickname(profile.nickname || '');
+        setBio(profile.description || '');
+      } else {
+        // Personal profile
+        setDisplayName(profile.displayName || '');
+        setNickname(profile.nickname || '');
+        setBio(profile.bio || '');
+      }
     } else if (user) {
       setDisplayName(user.displayName || '');
       setNickname('');
@@ -55,9 +63,15 @@ export default function ProfilePage() {
     
     setLoading(true);
     try {
-      // Nickname'i güncelle
+      // Nickname'i güncelle - hem personal hem business için
       if (nickname.trim() !== profile?.nickname) {
-        await updateUserNickname(user.uid, nickname.trim() || displayName);
+        if (profile && 'companyName' in profile) {
+          // Business profile
+          await updateBusinessNickname(user.uid, nickname.trim() || displayName);
+        } else {
+          // Personal profile
+          await updateUserNickname(user.uid, nickname.trim() || displayName);
+        }
       }
       
       // Burada diğer verileri de Firebase'e kaydet (ileride src/lib/api.ts ile yapılacak)
