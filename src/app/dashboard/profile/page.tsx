@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { getUserDisplayName, getUserUsername, updateUserNickname } from '@/lib/qr-utils';
+import { getUserDisplayName, getUserUsername, updateUserNickname, updateBusinessNickname } from '@/lib/qr-utils';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
