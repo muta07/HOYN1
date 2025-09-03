@@ -219,6 +219,40 @@ export function parseHOYNQR(data: string): QRData | null {
     
     const sanitizedData = sanitizeQRData(data);
     
+    // Check if it's JSON data (new HOYN! format with mode support)
+    if (sanitizedData.startsWith('{') && sanitizedData.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(sanitizedData);
+        
+        // Check for new HOYN! format (v1.1+)
+        if (parsed.hoyn && parsed.type && parsed.username) {
+          const result: any = {
+            type: parsed.type,
+            username: parsed.username,
+            url: parsed.url
+          };
+          
+          // Include mode information for profile QRs
+          if (parsed.mode) {
+            result.mode = parsed.mode;
+          }
+          
+          console.log('🎯 Parsed HOYN QR with mode:', result);
+          return result;
+        }
+        
+        // Legacy format support
+        if (parsed.hoyn && parsed.type) {
+          return {
+            type: 'custom',
+            data: parsed
+          };
+        }
+      } catch (jsonError) {
+        console.log('Not valid JSON, checking URL format');
+      }
+    }
+    
     // Check if it's a HOYN profile URL
     const profileMatch = sanitizedData.match(/^https:\/\/hoyn\.app\/u\/([a-zA-Z0-9_-]+)$/);
     if (profileMatch) {
@@ -237,21 +271,6 @@ export function parseHOYNQR(data: string): QRData | null {
         username: anonymousMatch[1],
         url: sanitizedData
       };
-    }
-    
-    // Check if it's JSON data
-    if (sanitizedData.startsWith('{') && sanitizedData.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(sanitizedData);
-        if (parsed.hoyn && parsed.type) {
-          return {
-            type: 'custom',
-            data: parsed
-          };
-        }
-      } catch {
-        // Not valid JSON, treat as custom URL
-      }
     }
     
     // Treat as custom URL

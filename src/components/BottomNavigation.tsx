@@ -3,6 +3,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/components/providers/SubscriptionProvider';
 
 interface NavItem {
   id: string;
@@ -14,6 +15,7 @@ interface NavItem {
 
 export default function BottomNavigation() {
   const { user } = useAuth();
+  const { hasPremiumAccess } = useSubscription();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -29,6 +31,13 @@ export default function BottomNavigation() {
       path: '/dashboard'
     },
     {
+      id: 'feed',
+      label: 'Akış',
+      icon: '📁',
+      activeIcon: '📰',
+      path: '/feed'
+    },
+    {
       id: 'discover',
       label: 'Keşfet',
       icon: '🔍',
@@ -42,13 +51,14 @@ export default function BottomNavigation() {
       activeIcon: '✨',
       path: '/studio'
     },
-    {
-      id: 'messages',
-      label: 'Mesajlar',
-      icon: '💬',
-      activeIcon: '💬',
-      path: '/dashboard/messages'
-    },
+    // Add Premium link for users with premium access
+    ...(hasPremiumAccess ? [{
+      id: 'premium',
+      label: 'Premium',
+      icon: '💎',
+      activeIcon: '🌟',
+      path: '/premium'
+    }] : []),
     {
       id: 'profile',
       label: 'Profil',

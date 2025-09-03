@@ -186,14 +186,24 @@ export default function ScanPage() {
                 </div>
                 
                 {qrData.username && (
-                  <p className="text-sm text-white mb-2">
-                    Kullanıcı: <span className="font-bold text-purple-300">@{qrData.username}</span>
-                  </p>
+                  <div className="bg-gray-900/50 rounded-lg p-3 mb-3">
+                    <p className="text-sm text-white">
+                      Kullanıcı: <span className="font-bold text-purple-300">@{qrData.username}</span>
+                    </p>
+                    {qrData.mode && qrData.type === 'profile' && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        {qrData.mode === 'note' ? '📝 Nota tıklayınca not sayfası açılacak' :
+                         qrData.mode === 'song' ? '🎵 Şarkıya tıklayınca müzik sayfası açılacak' :
+                         '👤 Profile tıklayınca profil sayfası açılacak'}
+                      </p>
+                    )}
+                  </div>
                 )}
                 
-                <code className="text-xs text-gray-300 break-all bg-gray-900 p-2 rounded block">
-                  {qrData.url || scannedData}
-                </code>
+                <div className="bg-gray-900/50 rounded-lg p-3">
+                  <p className="text-xs text-gray-400 mb-1">QR İçeriği:</p>
+                  <code className="text-xs text-gray-300 break-all">{qrData.url || scannedData}</code>
+                </div>
               </div>
               
               {isRedirecting ? (
@@ -223,7 +233,11 @@ export default function ScanPage() {
                     className="w-full"
                     glow
                   >
-                    {qrData.type === 'profile' ? '👤 Profile Git' :
+                    {qrData.type === 'profile' ? (
+                      qrData.mode === 'note' ? '📝 Notu Gör' :
+                      qrData.mode === 'song' ? '🎵 Şarkıyı Dinle' :
+                      '👤 Profile Git'
+                    ) :
                      qrData.type === 'anonymous' ? '💬 Mesaj Gönder' :
                      '🌐 Linki Aç'}
                   </NeonButton>
@@ -270,7 +284,30 @@ export default function ScanPage() {
             <div className="space-y-3">
               <div className="bg-purple-900/20 p-3 rounded-lg border border-purple-500/30">
                 <p className="text-sm font-bold text-purple-300 mb-1">🎆 HOYN! QR'ları</p>
-                <p className="text-xs text-gray-300">Otomatik olarak tanınır ve ilgili sayfaya yönlendirilir</p>
+                <p className="text-xs text-gray-300 mb-2">Otomatik olarak tanınır ve ilgili sayfaya yönlendirilir</p>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div className="bg-gray-800/50 p-2 rounded">
+                    <div className="text-center">
+                      <span className="text-lg">👤</span>
+                      <p className="text-purple-300 font-bold">Profil</p>
+                      <p className="text-gray-400">Normal profil</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-800/50 p-2 rounded">
+                    <div className="text-center">
+                      <span className="text-lg">📝</span>
+                      <p className="text-purple-300 font-bold">Not</p>
+                      <p className="text-gray-400">Özel mesaj</p>
+                    </div>
+                  </div>
+                  <div className="bg-gray-800/50 p-2 rounded">
+                    <div className="text-center">
+                      <span className="text-lg">🎵</span>
+                      <p className="text-purple-300 font-bold">Şarkı</p>
+                      <p className="text-gray-400">Müzik paylaşımı</p>
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="bg-red-900/20 p-3 rounded-lg border border-red-500/30">
                 <p className="text-sm font-bold text-red-300 mb-1">⚠️ Diğer QR'lar</p>

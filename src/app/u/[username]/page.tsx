@@ -4,28 +4,19 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import { getUserQRMode, QRModeData, NoteContent, SongContent } from '@/lib/qr-modes';
+import { db, UserProfile } from '@/lib/firebase';
+import { getUserQRMode, QRModeData, NoteContent, SongContent, getEmbedUrl } from '@/lib/qr-modes';
 import { incrementProfileViews } from '@/lib/stats';
 import { useAuth } from '@/hooks/useAuth';
 import Loading from '@/components/ui/Loading';
 import NeonButton from '@/components/ui/NeonButton';
 import AnimatedCard from '@/components/ui/AnimatedCard';
 import ProfileStats from '@/components/ui/ProfileStats';
-
-interface UserProfile {
-  uid: string;
-  email: string;
-  displayName: string;
-  nickname?: string;
-  username: string;
-  bio?: string;
-  instagram?: string;
-  twitter?: string;
-  allowAnonymous?: boolean;
-  createdAt: any;
-  updatedAt: any;
-}
+import { BusinessProfile } from '@/lib/firebase';
+import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
+import { ThemedCard, ThemedButton, ThemedText, ThemedBadge } from '@/components/ui/ThemedComponents';
+import FollowButton from '@/components/social/FollowButton';
+import SocialStats from '@/components/social/SocialStats';
 
 interface PageProps {
   params: {
@@ -153,6 +144,10 @@ export default function UserProfilePage({ params }: PageProps) {
 
   // Get display name
   const displayName = userProfile.nickname || userProfile.displayName || userProfile.username;
+  
+  // Check if this is a business profile
+  const isBusinessProfile = 'companyName' in userProfile;
+  const businessProfile = isBusinessProfile ? userProfile as unknown as BusinessProfile : null;
 
   // Note Mode Display
   if (qrMode?.mode === 'note' && noteContent) {
@@ -213,14 +208,15 @@ export default function UserProfilePage({ params }: PageProps) {
     );
   }
 
-  // Song Mode Display
+  // Song Mode Display with Enhanced Embeds
   if (qrMode?.mode === 'song' && songContent) {
     const isSpotify = songContent.platform === 'spotify' || songContent.url.includes('spotify');
     const isYouTube = songContent.platform === 'youtube' || songContent.url.includes('youtube');
+    const embedUrl = getEmbedUrl(songContent);
     
     return (
       <div className="min-h-screen bg-black text-white p-6">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <AnimatedCard direction="up" className="text-center">
             <div className="mb-8">
               {/* Music Icon */}
@@ -237,24 +233,55 @@ export default function UserProfilePage({ params }: PageProps) {
                 </p>
               )}
               
-              {/* Platform Info */}
+              {/* Music Player / Embed */}
               <div className="glass-effect p-6 rounded-xl cyber-border mb-6">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  {isSpotify && <span className="text-3xl">🎧</span>}
-                  {isYouTube && <span className="text-3xl">📺</span>}
-                  {!isSpotify && !isYouTube && <span className="text-3xl">🎶</span>}
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  {isSpotify && <span className="text-4xl">🎧</span>}
+                  {isYouTube && <span className="text-4xl">📺</span>}
+                  {!isSpotify && !isYouTube && <span className="text-4xl">🎶</span>}
                   
-                  <span className="text-lg font-bold text-purple-300">
+                  <span className="text-2xl font-bold text-purple-300">
                     {isSpotify ? 'Spotify' : isYouTube ? 'YouTube' : 'Müzik'}
                   </span>
                 </div>
                 
-                {/* Play Button */}
+                {/* Embed Player */}
+                {embedUrl && (isSpotify || isYouTube) ? (
+                  <div className="mb-6">
+                    <div className="relative w-full" style={{ paddingBottom: isYouTube ? '56.25%' : '380px' }}>
+                      <iframe
+                        src={embedUrl}
+                        className={`absolute top-0 left-0 w-full ${
+                          isYouTube ? 'h-full' : 'h-96'
+                        } rounded-lg`}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                        loading="lazy"
+                        title={`${songContent.title || 'Şarkı'} - ${songContent.artist || 'Bilinmeyen Sanatçı'}`}
+                      />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-3">
+                      {isSpotify ? '🎧 Direkt olarak Spotify\'dan dinle' :
+                       isYouTube ? '📺 Direkt olarak YouTube\'dan izle' :
+                       '🎶 Embed player'}. Sorun yaşıyorsan aşağıdaki butonu kullan.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mb-6 p-6 bg-gray-800/50 rounded-lg border border-gray-600">
+                    <div className="text-4xl mb-3">🔗</div>
+                    <p className="text-gray-300 mb-4">
+                      Bu platform için embed desteklenmiyorum ama linki açabilirsin!
+                    </p>
+                  </div>
+                )}
+                
+                {/* Fallback Play Button */}
                 <NeonButton
                   onClick={() => window.open(songContent.url, '_blank')}
-                  variant="primary"
+                  variant={embedUrl && (isSpotify || isYouTube) ? "secondary" : "primary"}
                   size="lg"
-                  glow
+                  glow={!embedUrl || (!isSpotify && !isYouTube)}
                   className="w-full mb-4"
                 >
                   {isSpotify ? '🎧 Spotify\'da Aç' : isYouTube ? '📺 YouTube\'da Aç' : '🎶 Şarkıyı Aç'}
@@ -266,6 +293,26 @@ export default function UserProfilePage({ params }: PageProps) {
                    'Müzik bağlantısı yeni sekmede açılacak'}
                 </p>
               </div>
+              
+              {/* Song Details */}
+              {(songContent.title || songContent.artist) && (
+                <div className="glass-effect p-4 rounded-lg cyber-border mb-6 bg-purple-900/10">
+                  <h3 className="text-purple-300 font-bold mb-2">🎼 Şarkı Detayları</h3>
+                  {songContent.title && (
+                    <p className="text-sm text-gray-300">
+                      <span className="text-purple-400">Başlık:</span> {songContent.title}
+                    </p>
+                  )}
+                  {songContent.artist && (
+                    <p className="text-sm text-gray-300">
+                      <span className="text-purple-400">Sanatçı:</span> {songContent.artist}
+                    </p>
+                  )}
+                  <p className="text-sm text-gray-300">
+                    <span className="text-purple-400">Platform:</span> {isSpotify ? 'Spotify' : isYouTube ? 'YouTube' : 'Diğer'}
+                  </p>
+                </div>
+              )}
               
               {/* User Info */}
               <div className="text-sm text-gray-400 mb-6">
@@ -291,6 +338,26 @@ export default function UserProfilePage({ params }: PageProps) {
                 >
                   🏠 Ana Sayfaya Dön
                 </NeonButton>
+                
+                <NeonButton
+                  onClick={() => {
+                    if (navigator.share) {
+                      navigator.share({
+                        title: `${songContent.title || 'Şarkı Önerisi'} - ${songContent.artist || userProfile.username}`,
+                        text: `${userProfile.username} adlı kullanıcı sana bir şarkı öneriyor!`,
+                        url: window.location.href
+                      }).catch(console.error);
+                    } else {
+                      navigator.clipboard.writeText(window.location.href);
+                      alert('Link panoya kopyalandı!');
+                    }
+                  }}
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                >
+                  📤 Bu Şarkıyı Paylaş
+                </NeonButton>
               </div>
             </div>
           </AnimatedCard>
@@ -301,22 +368,155 @@ export default function UserProfilePage({ params }: PageProps) {
 
   // Default Profile Mode Display
   return (
-    <div className="min-h-screen bg-black text-white py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <AnimatedCard direction="up">
-          {/* Header */}
-          <div className="text-center mb-12">
-            <h1 className="text-6xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-4 glow-text">
-              👤 {displayName}
-            </h1>
-            <p className="text-xl text-gray-300 mb-2">
-              @{userProfile.username}
-            </p>
-            {userProfile.bio && (
-              <p className="text-gray-400 max-w-2xl mx-auto">
-                {userProfile.bio}
-              </p>
+    <ThemedProfileWrapper profile={userProfile}>
+      <div className="min-h-screen py-12 px-6">
+        <div className="max-w-4xl mx-auto">
+          <ThemedCard variant="default" glow>
+            {/* Header */}
+            <div className="text-center mb-12">
+              {/* Business Icon or User Icon */}
+              <div className="text-8xl mb-4">
+                {isBusinessProfile ? '🏢' : '👤'}
+              </div>
+              
+              <ThemedText size="4xl" weight="black" variant="primary" glow className="mb-4">
+                {displayName}
+              </ThemedText>
+              
+              {isBusinessProfile && businessProfile?.companyName !== displayName && (
+                <ThemedText size="2xl" variant="default" className="mb-2">
+                  {businessProfile?.companyName}
+                </ThemedText>
+              )}
+              
+              <ThemedText size="xl" variant="muted" className="mb-2">
+                @{userProfile.username}
+              </ThemedText>
+              
+              {/* Business Type & Sector */}
+              {isBusinessProfile && (businessProfile?.businessType || businessProfile?.sector) && (
+                <div className="flex justify-center gap-2 mb-4">
+                  {businessProfile?.businessType && (
+                    <ThemedBadge variant="primary" size="md">
+                      {businessProfile.businessType}
+                    </ThemedBadge>
+                  )}
+                  {businessProfile?.sector && (
+                    <ThemedBadge variant="accent" size="md">
+                      {businessProfile.sector}
+                    </ThemedBadge>
+                  )}
+                </div>
+              )}
+              
+              {userProfile.bio && (
+                <ThemedText variant="muted" className="max-w-2xl mx-auto mb-4">
+                  {userProfile.bio}
+                </ThemedText>
+              )}
+            
+            {/* Business Info */}
+            {isBusinessProfile && (
+              <div className="max-w-2xl mx-auto mb-6">
+                {/* Founded Year & Employee Count */}
+                {(businessProfile?.foundedYear || businessProfile?.employeeCount) && businessProfile?.businessSettings?.showFoundedYear && (
+                  <div className="flex justify-center gap-6 text-sm mb-4">
+                    {businessProfile?.foundedYear && businessProfile?.businessSettings?.showFoundedYear && (
+                      <ThemedText size="sm" variant="muted">
+                        📅 {businessProfile.foundedYear} yılından beri
+                      </ThemedText>
+                    )}
+                    {businessProfile?.employeeCount && businessProfile?.businessSettings?.showEmployeeCount && (
+                      <ThemedText size="sm" variant="muted">
+                        👥 {businessProfile.employeeCount}
+                      </ThemedText>
+                    )}
+                  </div>
+                )}
+                
+                {/* Location */}
+                {businessProfile?.location?.city && businessProfile?.businessSettings?.showLocation && (
+                  <ThemedText size="sm" variant="muted" className="mb-4 block text-center">
+                    📍 {businessProfile.location.city}
+                    {businessProfile.location.district && `, ${businessProfile.location.district}`}
+                    {businessProfile.location.country && `, ${businessProfile.location.country}`}
+                  </ThemedText>
+                )}
+                
+                {/* Services */}
+                {businessProfile?.services && businessProfile.services.length > 0 && (
+                  <div className="mb-6">
+                    <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
+                      ⚙️ Hizmetlerimiz
+                    </ThemedText>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {businessProfile.services.slice(0, 6).map((service, index) => (
+                        <ThemedBadge key={index} variant="secondary" size="sm">
+                          {service}
+                        </ThemedBadge>
+                      ))}
+                      {businessProfile.services.length > 6 && (
+                        <ThemedBadge variant="accent" size="sm">
+                          +{businessProfile.services.length - 6} diğer
+                        </ThemedBadge>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Working Hours */}
+                {businessProfile?.workingHours && businessProfile?.businessSettings?.showWorkingHours && (
+                  <div className="mb-6">
+                    <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
+                      🕐 Çalışma Saatleri
+                    </ThemedText>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                      {Object.entries({
+                        monday: 'Pzt', tuesday: 'Sal', wednesday: 'Çar', thursday: 'Per',
+                        friday: 'Cum', saturday: 'Cmt', sunday: 'Paz'
+                      }).map(([day, shortName]) => {
+                        const hours = businessProfile.workingHours?.[day as keyof typeof businessProfile.workingHours];
+                        if (!hours) return null;
+                        return (
+                          <ThemedCard key={day} variant="secondary" className="p-2 text-center">
+                            <ThemedText weight="bold" variant="primary" size="sm" className="block">
+                              {shortName}
+                            </ThemedText>
+                            <ThemedText size="xs" variant="default">
+                              {hours}
+                            </ThemedText>
+                          </ThemedCard>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
+          </div>
+
+          {/* Social Stats and Follow Button */}
+          <div className="mb-8 space-y-4">
+            {/* Social Stats */}
+            <SocialStats 
+              userId={userProfile.uid}
+              username={userProfile.username}
+              initialFollowersCount={userProfile.followersCount || 0}
+              initialFollowingCount={userProfile.followingCount || 0}
+              variant="inline"
+              className="justify-center"
+              clickable={true}
+            />
+            
+            {/* Follow Button */}
+            <div className="flex justify-center">
+              <FollowButton
+                targetUserId={userProfile.uid}
+                targetUsername={userProfile.username}
+                targetDisplayName={displayName}
+                className="min-w-[200px]"
+              />
+            </div>
           </div>
 
           {/* Profile Statistics */}
@@ -327,26 +527,106 @@ export default function UserProfilePage({ params }: PageProps) {
             />
           </div>
 
-          {/* Social Links */}
-          {(userProfile.instagram || userProfile.twitter) && (
-            <div className="flex justify-center gap-4 mb-10">
-              {userProfile.instagram && (
-                <NeonButton
-                  onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
-                  variant="secondary"
-                  size="md"
-                >
-                  📸 Instagram
-                </NeonButton>
+          {/* Social Links & Contact */}
+          {(userProfile.instagram || userProfile.twitter || 
+            (isBusinessProfile && (businessProfile?.socialMedia?.instagram || 
+             businessProfile?.socialMedia?.facebook || businessProfile?.socialMedia?.linkedin || 
+             businessProfile?.phone || businessProfile?.website))) && (
+            <div className="mb-10">
+              {/* Personal Social Media */}
+              {(userProfile.instagram || userProfile.twitter) && (
+                <div className="flex justify-center gap-4 mb-4">
+                  {userProfile.instagram && (
+                    <ThemedButton
+                      onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
+                      variant="secondary"
+                      size="md"
+                    >
+                      📸 Instagram
+                    </ThemedButton>
+                  )}
+                  {userProfile.twitter && (
+                    <ThemedButton
+                      onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
+                      variant="secondary"
+                      size="md"
+                    >
+                      🐦 Twitter
+                    </ThemedButton>
+                  )}
+                </div>
               )}
-              {userProfile.twitter && (
-                <NeonButton
-                  onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
-                  variant="secondary"
-                  size="md"
-                >
-                  🐦 Twitter
-                </NeonButton>
+              
+              {/* Business Social Media & Contact */}
+              {isBusinessProfile && (
+                <div className="space-y-4">
+                  {/* Business Social Media */}
+                  {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
+                    businessProfile?.socialMedia?.linkedin) && (
+                    <div className="flex justify-center gap-3 flex-wrap">
+                      {businessProfile?.socialMedia?.instagram && (
+                        <NeonButton
+                          onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          📸 Instagram
+                        </NeonButton>
+                      )}
+                      {businessProfile?.socialMedia?.facebook && (
+                        <NeonButton
+                          onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          🔵 Facebook
+                        </NeonButton>
+                      )}
+                      {businessProfile?.socialMedia?.linkedin && (
+                        <NeonButton
+                          onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
+                          variant="secondary"
+                          size="sm"
+                        >
+                          💼 LinkedIn
+                        </NeonButton>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Business Contact */}
+                  {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
+                    <div className="flex justify-center gap-3 flex-wrap">
+                      {businessProfile?.phone && (
+                        <NeonButton
+                          onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          📞 {businessProfile.phone}
+                        </NeonButton>
+                      )}
+                      {businessProfile?.contactInfo?.whatsapp && (
+                        <NeonButton
+                          onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          📱 WhatsApp
+                        </NeonButton>
+                      )}
+                      {businessProfile?.website && (
+                        <NeonButton
+                          onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
+                          variant="outline"
+                          size="sm"
+                        >
+                          🌐 Website
+                        </NeonButton>
+                      )}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
@@ -355,7 +635,7 @@ export default function UserProfilePage({ params }: PageProps) {
           <div className="text-center space-y-4">
             {userProfile.allowAnonymous !== false && (
               <div>
-                <NeonButton
+                <ThemedButton
                   onClick={() => router.push(`/ask/${userProfile.username}`)}
                   variant="primary"
                   size="lg"
@@ -363,24 +643,25 @@ export default function UserProfilePage({ params }: PageProps) {
                   className="w-full max-w-md"
                 >
                   💬 Anonim Mesaj Gönder
-                </NeonButton>
-                <p className="text-sm text-gray-500 mt-2">
+                </ThemedButton>
+                <ThemedText size="sm" variant="muted" className="mt-2 block">
                   Kimliğin gizli kalacak, sadece mesajın iletilecek
-                </p>
+                </ThemedText>
               </div>
             )}
             
-            <NeonButton
+            <ThemedButton
               onClick={() => router.push('/')}
               variant="outline"
               size="md"
               className="w-full max-w-md"
             >
               🏠 Ana Sayfaya Dön
-            </NeonButton>
+            </ThemedButton>
           </div>
-        </AnimatedCard>
+        </ThemedCard>
       </div>
     </div>
+    </ThemedProfileWrapper>
   );
 }

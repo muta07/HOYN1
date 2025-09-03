@@ -301,26 +301,34 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
     }
   }, [router]);
 
-  // Render scan result with mode support
+  // Render scan result with enhanced mode support
   const renderScanResult = (result: ScanResult) => {
     // HOYN! profile QR code with mode display
     if (result.isHoynQR && result.type === 'profile' && result.parsedData) {
       const { username, mode } = result.parsedData;
       const modeEmoji = mode === 'note' ? '📝' : mode === 'song' ? '🎵' : '👤';
       const modeText = mode === 'note' ? 'Not Modu' : mode === 'song' ? 'Şarkı Modu' : 'Profil Modu';
+      const modeDescription = mode === 'note' ? 'Kullanıcının özel notunu göreceksiniz' : 
+                             mode === 'song' ? 'Kullanıcının paylaştığı şarkıyı dinleyeceksiniz' : 
+                             'Kullanıcının profilini görüntüleyeceksiniz';
       
       return (
         <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">{modeEmoji}</span>
-            <h3 className="font-bold text-purple-300">HOYN! Profil QR - {modeText}</h3>
+          <div className="flex items-center gap-3 mb-3">
+            <span className="text-3xl">{modeEmoji}</span>
+            <div>
+              <h3 className="font-bold text-purple-300">HOYN! Profil QR - {modeText}</h3>
+              <p className="text-sm text-gray-400">{modeDescription}</p>
+            </div>
           </div>
-          <p className="text-white">Kullanıcı: <span className="font-mono">{username}</span></p>
-          <p className="text-gray-400 text-sm mt-1">
-            {mode === 'note' ? 'Kullanıcının özel notunu görmek için' :
-             mode === 'song' ? 'Kullanıcının şarkı önerisini dinlemek için' :
-             'Profil sayfasını açmak için'} 'Aç' butonuna tıklayın
-          </p>
+          <div className="bg-gray-900/50 rounded-lg p-3 mb-3">
+            <p className="text-white text-sm">Kullanıcı: <span className="font-mono text-purple-300">@{username}</span></p>
+            <p className="text-xs text-gray-400 mt-1">
+              {mode === 'note' ? '📝 Tarayıcı tıklayınca not sayfası açılacak' :
+               mode === 'song' ? '🎵 Tarayıcı tıklayınca şarkı sayfası açılacak' :
+               '👤 Tarayıcı tıklayınca profil sayfası açılacak'}
+            </p>
+          </div>
         </div>
       );
     }
@@ -335,8 +343,10 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
             <span className="text-2xl">💬</span>
             <h3 className="font-bold text-purple-300">HOYN! Anonim Mesaj QR</h3>
           </div>
-          <p className="text-white">Kullanıcı: <span className="font-mono">{username}</span></p>
-          <p className="text-gray-400 text-sm mt-1">Anonim mesaj göndermek için 'Aç' butonuna tıklayın</p>
+          <div className="bg-gray-900/50 rounded-lg p-3 mb-3">
+            <p className="text-white text-sm">Kullanıcı: <span className="font-mono text-purple-300">@{username}</span></p>
+            <p className="text-xs text-gray-400 mt-1">💬 Anonim mesaj göndermek için 'Aç' butonuna tıklayın</p>
+          </div>
         </div>
       );
     }

@@ -77,14 +77,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
-               onClick={() => router.push('/dashboard/profile')}>
+               onClick={() => router.push(isBusinessAccount ? '/dashboard/business-profile' : '/dashboard/profile')}>
             <div className="text-6xl mb-4 float">{isBusinessAccount ? '🏢' : '👤'}</div>
             <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
               {isBusinessAccount ? 'İşletme Profilini Yönet' : 'Profilini Yönet'}
             </h2>
             <p className="text-gray-300 mb-6">
               {isBusinessAccount
-                ? 'Şirket bilgileri, menü, çalışanlar – işletmeni özelleştir.'
+                ? 'Şirket bilgileri, hizmetler, çalışma saatleri, sosyal medya hesapları – işletmeni özelleştir.'
                 : 'Bio, sosyal medya, anonim soru ayarları – kim olduğunu özelleştir.'
               }
             </p>

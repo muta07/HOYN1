@@ -9,9 +9,11 @@ import { getUserQRMode, updateUserQRMode, QRMode, formatQRModeDisplay, validateN
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import ProfileStats from '@/components/ui/ProfileStats';
+import { useSubscription } from '@/components/providers/SubscriptionProvider';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading } = useAuth();
+  const { subscription, hasActiveSubscription, hasPremiumFeatures } = useSubscription();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState('');
@@ -168,6 +170,50 @@ export default function ProfilePage() {
         {/* Profile Statistics */}
         <div className="mb-10">
           <ProfileStats userId={user.uid} isOwnProfile={true} />
+        </div>
+
+        {/* Subscription Status */}
+        <div className="mb-10">
+          <div className="glass-effect p-8 rounded-xl cyber-border">
+            <h2 className="text-2xl font-bold text-white mb-6 glow-text flex items-center gap-2">
+              <span>💎</span>
+              Üyelik Durumu
+            </h2>
+            
+            {subscription ? (
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="font-bold text-lg">
+                      {subscription.planId === 'basic' && 'Basic Plan'}
+                      {subscription.planId === 'pro' && 'Pro Plan'}
+                      {subscription.planId === 'business' && 'Business Plan'}
+                    </span>
+                    {hasPremiumFeatures && (
+                      <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">Premium</span>
+                    )}
+                  </div>
+                  <p className="text-gray-300 text-sm">
+                    {hasActiveSubscription 
+                      ? `Bitiş tarihi: ${subscription.endDate.toLocaleDateString('tr-TR')}` 
+                      : 'Üyeliğiniz sona ermiş'}
+                  </p>
+                </div>
+                
+                <NeonButton
+                  onClick={() => router.push('/subscription')}
+                  variant={hasActiveSubscription ? "outline" : "primary"}
+                  size="md"
+                >
+                  {hasActiveSubscription ? 'Üyeliği Yönet' : 'Premium Ol'}
+                </NeonButton>
+              </div>
+            ) : (
+              <div className="text-center py-4">
+                <Loading size="sm" text="Üyelik bilgileri yükleniyor..." />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* QR Mode Configuration */}
