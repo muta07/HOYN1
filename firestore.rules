@@ -80,6 +80,16 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
     
+    // User mockups for design studio - users can manage their own mockups
+    match /user-mockups/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User exported designs - users can manage their own exports
+    match /user-exports/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
     // Public data that anyone can read (e.g., app configuration)
     match /public/{document=**} {
       allow read: if true;

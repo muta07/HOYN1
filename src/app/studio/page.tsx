@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { generateHOYNQR } from '@/lib/qr-utils';
+import { uploadUserMockup, getUserMockups, validateImageFile, formatFileSize, UploadResult } from '@/lib/storage';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import AnimatedCard from '@/components/ui/AnimatedCard';
@@ -96,10 +97,15 @@ export default function StudioPage() {
   // State management
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedImageInfo, setUploadedImageInfo] = useState<UploadResult | null>(null);
+  const [userMockups, setUserMockups] = useState<UploadResult[]>([]);
   const [qrPlacement, setQrPlacement] = useState<QRPlacement>(QR_PRESETS[0].placement);
   const [userQRCode, setUserQRCode] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Get username for QR generation
   const username = user?.displayName || 
@@ -120,6 +126,22 @@ export default function StudioPage() {
     }
   }, [username]);
 
+  // Load user's existing mockups
+  useEffect(() => {
+    const loadUserMockups = async () => {
+      if (user) {
+        try {
+          const mockups = await getUserMockups(user.uid);
+          setUserMockups(mockups);
+        } catch (error) {
+          console.error('Error loading user mockups:', error);
+        }
+      }
+    };
+
+    loadUserMockups();
+  }, [user]);
+
   // Handle template selection
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
@@ -127,16 +149,49 @@ export default function StudioPage() {
     setQrPlacement(QR_PRESETS[0].placement); // Reset to center
   };
 
-  // Handle image upload
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle image upload with Firebase Storage
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setUploadedImage(e.target?.result as string);
-        setSelectedTemplate(null); // Clear template when uploading custom image
-      };
-      reader.readAsDataURL(file);
+    if (!file || !user) return;
+
+    // Reset previous errors
+    setUploadError(null);
+    
+    // Validate file
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setUploadError(validation.error || 'Invalid file');
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Upload to Firebase Storage
+      const uploadResult = await uploadUserMockup(
+        user.uid, 
+        file, 
+        (progress) => setUploadProgress(progress)
+      );
+
+      // Set as current uploaded image
+      setUploadedImage(uploadResult.url);
+      setUploadedImageInfo(uploadResult);
+      setSelectedTemplate(null); // Clear template when uploading custom image
+      
+      // Refresh user mockups list
+      const updatedMockups = await getUserMockups(user.uid);
+      setUserMockups(updatedMockups);
+      
+      console.log('✅ Image uploaded successfully:', uploadResult);
+      
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      setUploadError(error instanceof Error ? error.message : 'Upload failed');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -326,31 +381,97 @@ export default function StudioPage() {
                 <span>📁</span>
                 Upload Custom
               </h2>
-              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+              
+              {/* Upload Area */}
+              <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                isUploading ? 'border-purple-500 bg-purple-900/20' : 'border-gray-600 hover:border-purple-500'
+              }`}>
                 <input
                   type="file"
                   accept="image/*"
                   onChange={handleImageUpload}
+                  disabled={isUploading}
                   className="hidden"
                   id="image-upload"
                 />
                 <label 
                   htmlFor="image-upload"
-                  className="cursor-pointer block"
+                  className={`cursor-pointer block ${isUploading ? 'opacity-50' : ''}`}
                 >
-                  <div className="text-4xl mb-2">📤</div>
-                  <div className="text-sm text-gray-300 mb-2">
-                    Click to upload your mockup
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    PNG, JPG up to 10MB
-                  </div>
+                  {isUploading ? (
+                    <>
+                      <div className="text-4xl mb-2">⏳</div>
+                      <div className="text-sm text-purple-300 mb-2">
+                        Uploading... {uploadProgress}%
+                      </div>
+                      <div className="w-full bg-gray-700 rounded-full h-2 mb-2">
+                        <div 
+                          className="bg-purple-500 h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${uploadProgress}%` }}
+                        ></div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-4xl mb-2">📤</div>
+                      <div className="text-sm text-gray-300 mb-2">
+                        Click to upload your mockup
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        PNG, JPG up to 10MB
+                      </div>
+                    </>
+                  )}
                 </label>
               </div>
-              {uploadedImage && (
-                <div className="mt-3 p-2 bg-green-900/20 border border-green-500/30 rounded text-sm text-green-300">
-                  ✓ Custom image uploaded successfully
+              
+              {/* Upload Status */}
+              {uploadError && (
+                <div className="mt-3 p-3 bg-red-900/20 border border-red-500/30 rounded text-sm text-red-300">
+                  ⚠️ {uploadError}
                 </div>
+              )}
+              
+              {uploadedImageInfo && (
+                <div className="mt-3 p-3 bg-green-900/20 border border-green-500/30 rounded text-sm">
+                  <div className="text-green-300 font-medium mb-1">
+                    ✓ {uploadedImageInfo.fileName}
+                  </div>
+                  <div className="text-green-400 text-xs">
+                    {formatFileSize(uploadedImageInfo.size)}
+                  </div>
+                </div>
+              )}
+              
+              {/* User's Existing Mockups */}
+              {userMockups.length > 0 && (
+                <>
+                  <h3 className="font-bold text-white mt-6 mb-3">Your Mockups</h3>
+                  <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto">
+                    {userMockups.map((mockup, index) => (
+                      <button
+                        key={index}
+                        onClick={() => {
+                          setUploadedImage(mockup.url);
+                          setUploadedImageInfo(mockup);
+                          setSelectedTemplate(null);
+                        }}
+                        className={`p-2 rounded border text-left transition-all ${
+                          uploadedImageInfo?.fileName === mockup.fileName
+                            ? 'border-purple-500 bg-purple-900/20'
+                            : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                        }`}
+                      >
+                        <div className="text-sm font-medium text-white truncate">
+                          {mockup.fileName}
+                        </div>
+                        <div className="text-xs text-gray-400">
+                          {formatFileSize(mockup.size)}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
