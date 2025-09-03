@@ -47,7 +47,7 @@ export default function DashboardPage() {
         <div className="text-center mb-16">
           <h1 className="text-6xl font-black glow-text font-orbitron mb-4 float
                          bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {isBusinessAccount ? 'HOYN! Business' : 'HOYN! Panel'}
+            {isBusinessAccount ? 'HOYN! Business' : 'Profil'}
           </h1>
           <p className="text-xl text-gray-300 mb-4">
             Hoş geldin, <span className="text-purple-400 font-bold glow-text">{username}</span>!

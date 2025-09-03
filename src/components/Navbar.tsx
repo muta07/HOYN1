@@ -50,7 +50,7 @@ export default function Navbar() {
                 variant="secondary"
                 size="sm"
               >
-                Panel
+                Profil
               </NeonButton>
               <NeonButton
                 onClick={handleLogout}
