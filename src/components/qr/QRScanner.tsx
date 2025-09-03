@@ -53,33 +53,54 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
     }
   };
 
-  // Parse HOYN! QR format
+  // Parse HOYN! QR format with enhanced validation
   const parseHoynQR = (data: string): { isHoyn: boolean; parsedData?: any; type: ScanResult['type'] } => {
     try {
       // Try to parse as JSON first (HOYN! format)
       const parsed = JSON.parse(data);
       
-      // Validate HOYN! format
+      // Validate HOYN! format with required fields
       if (parsed.hoyn && parsed.type && parsed.username) {
+        // Additional validation for profile URLs
+        if (parsed.type === 'profile' && !parsed.url?.includes(parsed.username)) {
+          console.warn('Invalid HOYN! profile QR: URL doesn\'t match username');
+          return { isHoyn: false, type: 'other' };
+        }
+        
         return { 
           isHoyn: true, 
           parsedData: parsed,
-          type: parsed.type === 'custom' ? 'custom' : parsed.type === 'anonymous' ? 'anonymous' : 'profile'
+          type: parsed.type === 'custom' ? 'custom' : 
+                parsed.type === 'anonymous' ? 'anonymous' : 'profile'
         };
       }
     } catch (e) {
       // Not JSON, check if it's a HOYN! URL
       if (data.includes('hoyn.app') || data.includes('hoyn.')) {
-        return { 
-          isHoyn: true, 
-          parsedData: { type: 'url', url: data },
-          type: 'url'
-        };
+        try {
+          // Validate URL format
+          const url = new URL(data);
+          if (url.hostname.includes('hoyn')) {
+            return { 
+              isHoyn: true, 
+              parsedData: { type: 'url', url: data },
+              type: 'url'
+            };
+          }
+        } catch (urlError) {
+          console.warn('Invalid HOYN! URL format:', data);
+        }
       }
     }
     
-    // Regular QR code
-    return { isHoyn: false, type: 'other' };
+    // Regular QR code - validate if it's a URL
+    try {
+      new URL(data);
+      return { isHoyn: false, type: 'other' };
+    } catch {
+      // Not a URL, just text
+      return { isHoyn: false, type: 'other' };
+    }
   };
 
   // Handle successful scan - Fixed for @yudiel/react-qr-scanner v2.3.1
@@ -196,6 +217,67 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
     setIsScanning(false);
     setIsFlashlightOn(false);
   };
+
+  // Handle QR redirect with validation and security
+  const handleQRRedirect = useCallback((scanData: ScanResult) => {
+    try {
+      if (scanData.isHoynQR) {
+        // HOYN! QR codes - construct URLs safely
+        const { username, url, type } = scanData.parsedData || {};
+        let targetUrl;
+        
+        if (type === 'custom' && url) {
+          // Validate custom URL
+          try {
+            new URL(url);
+            targetUrl = url;
+          } catch {
+            setError('Geçersiz özel URL formatı');
+            return;
+          }
+        } else if (type === 'anonymous' && username) {
+          targetUrl = `https://hoyn.app/${encodeURIComponent(username)}/anonymous`;
+        } else if (type === 'url' && url) {
+          targetUrl = url;
+        } else if (type === 'profile' && username) {
+          targetUrl = `https://hoyn.app/${encodeURIComponent(username)}`;
+        } else {
+          setError('HOYN! QR formatı tanınmadı');
+          return;
+        }
+        
+        if (targetUrl) {
+          console.log('🚀 Opening HOYN! URL:', targetUrl);
+          window.open(targetUrl, '_blank', 'noopener,noreferrer');
+        }
+      } else {
+        // Regular QR codes - validate URL first
+        try {
+          const url = new URL(scanData.data);
+          
+          // Only allow safe protocols
+          if (['http:', 'https:'].includes(url.protocol)) {
+            console.log('🔗 Opening external URL:', scanData.data);
+            
+            // Show confirmation for external URLs
+            if (confirm(`Dış bağlantı açılacak:\n${scanData.data}\n\nDevam etmek istiyor musunuz?`)) {
+              window.open(scanData.data, '_blank', 'noopener,noreferrer');
+            }
+          } else {
+            setError(`Güvenli olmayan protokol: ${url.protocol}`);
+          }
+        } catch {
+          // Not a URL, treat as text
+          console.log('📝 QR contains text, copying to clipboard');
+          navigator.clipboard.writeText(scanData.data);
+          setError('QR metin içeriği panoya kopyalandı');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Redirect error:', error);
+      setError('Bağlantı açılırken hata oluştu');
+    }
+  }, []);
 
   // Render scan result
   const renderScanResult = (result: ScanResult) => {
@@ -472,49 +554,42 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
               
               {/* Action Buttons */}
               <div className="flex gap-3 mt-4">
-                {scanResult.isHoynQR && (
-                  <NeonButton
-                    variant="primary"
-                    size="sm"
-                    glow
-                    onClick={() => {
-                      if (scanResult.isHoynQR) {
-                        const { username, url, type } = scanResult.parsedData || {};
-                        let targetUrl;
-                        
-                        if (type === 'custom') {
-                          targetUrl = url;
-                        } else if (type === 'anonymous') {
-                          targetUrl = `https://hoyn.app/${username}/anonymous`;
-                        } else if (type === 'url') {
-                          targetUrl = url;
-                        } else {
-                          targetUrl = `https://hoyn.app/${username}${type === 'anonymous' ? '/anonymous' : ''}`;
-                        }
-                        
-                        if (targetUrl) {
-                          window.open(targetUrl, '_blank');
-                        }
-                      } else {
-                        // Handle regular QR codes
-                        window.open(`https://hoyn.app/redirect?url=${encodeURIComponent(scanResult.data)}`, '_blank');
-                      }
-                    }}
-                  >
-                    {scanResult.isHoynQR ? '🚀 Aç' : '🔗 Bağlantıyı Aç'}
-                  </NeonButton>
-                )}
+                <NeonButton
+                  variant="primary"
+                  size="sm"
+                  glow
+                  onClick={() => {
+                    handleQRRedirect(scanResult);
+                  }}
+                >
+                  {scanResult.isHoynQR ? '🚀 Aç' : '🔗 Bağlantıyı Aç'}
+                </NeonButton>
                 
                 <NeonButton
                   variant="outline"
                   size="sm"
                   onClick={() => {
                     navigator.clipboard.writeText(scanResult.data);
-                    // Could add a toast notification
+                    // Show a temporary success message
+                    const button = document.activeElement as HTMLElement;
+                    const originalText = button.textContent;
+                    button.textContent = '✓ Kopyalandı';
+                    setTimeout(() => {
+                      if (button.textContent === '✓ Kopyalandı') {
+                        button.textContent = originalText;
+                      }
+                    }, 2000);
                   }}
                 >
                   📋 Kopyala
                 </NeonButton>
+                
+                {/* Show warning for non-HOYN QR codes */}
+                {!scanResult.isHoynQR && (
+                  <div className="w-full mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded text-yellow-300 text-xs">
+                    ⚠️ Bu bir HOYN! QR kodu değil. Dış bağlantı olarak açılacak.
+                  </div>
+                )}
               </div>
             </div>
           )}
