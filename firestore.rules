@@ -61,6 +61,17 @@ service cloud.firestore {
                      resource.data.get('isPublic', false) == true;
     }
     
+    // QR modes collection - users can manage their own QR display modes
+    match /qr_modes/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate QR mode data structure
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.data.keys().hasAll(['mode', 'content', 'userId']) &&
+                      request.resource.data.mode in ['profile', 'note', 'song'];
+    }
+    
     // Anonymous messages - special handling for anonymous communication
     match /anonymous_messages/{messageId} {
       // Allow creating anonymous messages to any user
