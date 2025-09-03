@@ -37,10 +37,10 @@ export default function BottomNavigation() {
     },
     {
       id: 'create',
-      label: 'Oluştur',
-      icon: '➕',
+      label: 'Studio',
+      icon: '🎨',
       activeIcon: '✨',
-      path: '/dashboard/qr-generator'
+      path: '/studio'
     },
     {
       id: 'messages',
