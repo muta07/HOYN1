@@ -31,6 +31,7 @@ export default function CanvasQRCode({
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isQRReady, setIsQRReady] = useState(false);
   const [progress, setProgress] = useState(0);
 
   // Validate QR value
@@ -114,6 +115,12 @@ export default function CanvasQRCode({
         
         // Update progress
         setProgress(100);
+        setIsQRReady(true);
+        
+        // QR code is ready - call onReady if no logo
+        if (!logo && onReady) {
+          onReady();
+        }
         
         // Add logo if provided
         if (logo) {
@@ -133,7 +140,9 @@ export default function CanvasQRCode({
               // Draw logo
               canvasContext.drawImage(logoImage, x, y, logoSize, logoSize);
               
-              // Call onReady if provided
+              setIsQRReady(true);
+              
+              // Call onReady if provided (QR with logo is now ready)
               if (onReady) {
                 onReady();
               }
@@ -176,8 +185,14 @@ export default function CanvasQRCode({
 
   const downloadQR = () => {
     if (error) {
-      console.error('QR indirme hatası: QR kodu oluşturulamadı');
-      setError('QR indirilemedi: QR kodu oluşturulamadı');
+      console.error('QR indirme hatası: QR kodu oluşturulam adı');
+      setError('QR indirilemedi: QR kodu oluşturulam adı');
+      return;
+    }
+    
+    if (!isQRReady) {
+      console.error('QR indirme hatası: QR henüz hazır değil');
+      setError('QR indirilemedi: QR henüz hazırlanmadı. Lütfen bekleyin.');
       return;
     }
     
@@ -192,7 +207,12 @@ export default function CanvasQRCode({
       const link = document.createElement('a');
       link.href = canvas.toDataURL('image/png');
       link.download = `hoyn-qr-${Date.now()}.png`;
+      document.body.appendChild(link);
       link.click();
+      document.body.removeChild(link);
+      
+      // Clear any previous errors
+      setError(null);
     } catch (error) {
       console.error('QR indirme hatası:', error);
       setError('QR indirilemedi. Lütfen tekrar deneyin.');
@@ -279,9 +299,14 @@ export default function CanvasQRCode({
       
       <button
         onClick={downloadQR}
-        className="mt-4 px-4 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-500 hover:to-pink-500 transition-all transform hover:scale-105 shadow-lg"
+        disabled={!isQRReady || !!error}
+        className={`mt-4 px-4 py-2 rounded-lg transition-all transform shadow-lg ${
+          isQRReady && !error 
+            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 hover:scale-105' 
+            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+        }`}
       >
-        📦 QR İndir
+        {isQRReady && !error ? '📦 QR İndir' : '⏳ Hazırlanıyor...'}
       </button>
     </div>
   );
