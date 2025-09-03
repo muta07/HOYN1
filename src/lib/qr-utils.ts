@@ -270,9 +270,13 @@ export function parseHOYNQR(data: string): QRData | null {
 }
 
 /**
- * Generates HOYN QR data
+ * Generates HOYN QR data with mode support
  */
-export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' = 'profile'): string {
+export function generateHOYNQR(
+  username: string, 
+  type: 'profile' | 'anonymous' = 'profile',
+  mode?: 'profile' | 'note' | 'song'
+): string {
   const baseUrl = process.env.NODE_ENV === 'production' 
     ? 'https://hoyn-1.vercel.app' 
     : `http://localhost:${process.env.PORT || 3000}`;
@@ -287,11 +291,34 @@ export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' =
     type: type,
     url: url,
     username: username,
+    mode: mode || 'profile', // Include QR mode for profile types
     createdAt: new Date().toISOString(),
-    version: '1.0'
+    version: '1.1' // Updated version to support modes
   };
   
   return JSON.stringify(hoynData);
+}
+
+/**
+ * Generates HOYN QR data with user's current mode
+ */
+export async function generateHOYNQRWithMode(username: string, userId?: string): Promise<string> {
+  let userMode: 'profile' | 'note' | 'song' = 'profile';
+  
+  // If userId is provided, fetch their current QR mode
+  if (userId) {
+    try {
+      const { getUserQRMode } = await import('./qr-modes');
+      const qrModeData = await getUserQRMode(userId);
+      if (qrModeData) {
+        userMode = qrModeData.mode;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user QR mode, using default profile mode:', error);
+    }
+  }
+  
+  return generateHOYNQR(username, 'profile', userMode);
 }
 
 /**

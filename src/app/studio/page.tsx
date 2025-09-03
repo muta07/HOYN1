@@ -4,7 +4,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { generateHOYNQR } from '@/lib/qr-utils';
+import { generateHOYNQR, generateHOYNQRWithMode } from '@/lib/qr-utils';
 import { uploadUserMockup, getUserMockups, validateImageFile, formatFileSize, UploadResult } from '@/lib/storage';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
@@ -118,13 +118,25 @@ export default function StudioPage() {
     }
   }, [user, authLoading, router]);
 
-  // Generate user QR code
+  // Generate user QR code with mode support
   useEffect(() => {
-    if (username) {
-      const qrValue = generateHOYNQR(username, 'profile');
-      setUserQRCode(qrValue);
-    }
-  }, [username]);
+    const generateQRWithMode = async () => {
+      if (username && user) {
+        try {
+          // Try to generate QR with user's current mode
+          const qrValue = await generateHOYNQRWithMode(username, user.uid);
+          setUserQRCode(qrValue);
+        } catch (error) {
+          console.warn('Failed to generate QR with mode, using default:', error);
+          // Fallback to default profile mode
+          const qrValue = generateHOYNQR(username, 'profile', 'profile');
+          setUserQRCode(qrValue);
+        }
+      }
+    };
+    
+    generateQRWithMode();
+  }, [username, user]);
 
   // Load user's existing mockups
   useEffect(() => {

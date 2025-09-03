@@ -2,6 +2,7 @@
 'use client';
 
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
@@ -23,6 +24,7 @@ interface ScanResult {
 }
 
 export default function QRScanner({ className = '', onScanSuccess, onScanError }: QRScannerProps) {
+  const router = useRouter();
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
   const [isFlashlightOn, setIsFlashlightOn] = useState(false);
@@ -54,7 +56,7 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
     }
   };
 
-  // Parse HOYN! QR format with enhanced validation
+  // Parse HOYN! QR format with enhanced validation and mode support
   const parseHoynQR = (data: string): { isHoyn: boolean; parsedData?: any; type: ScanResult['type'] } => {
     try {
       // Try to parse as JSON first (HOYN! format)
@@ -68,9 +70,14 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
           return { isHoyn: false, type: 'other' };
         }
         
+        // Include mode information for profile QRs
+        const qrMode = parsed.mode || 'profile'; // Default to profile mode
+        
+        console.log('🎯 HOYN QR detected with mode:', qrMode);
+        
         return { 
           isHoyn: true, 
-          parsedData: parsed,
+          parsedData: { ...parsed, mode: qrMode },
           type: parsed.type === 'custom' ? 'custom' : 
                 parsed.type === 'anonymous' ? 'anonymous' : 'profile'
         };
@@ -236,34 +243,35 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
   const handleQRRedirect = useCallback((scanData: ScanResult) => {
     try {
       if (scanData.isHoynQR) {
-        // HOYN! QR codes - construct URLs safely
-        const { username, url, type } = scanData.parsedData || {};
-        let targetUrl;
+        // HOYN! QR codes - handle different types
+        const { username, url, type, mode } = scanData.parsedData || {};
         
         if (type === 'custom' && url) {
           // Validate custom URL
           try {
             new URL(url);
-            targetUrl = url;
+            console.log('🔗 Opening custom URL:', url);
+            window.open(url, '_blank', 'noopener,noreferrer');
           } catch {
             setError('Geçersiz özel URL formatı');
             return;
           }
         } else if (type === 'anonymous' && username) {
-          targetUrl = `https://hoyn.app/${encodeURIComponent(username)}/anonymous`;
+          // Navigate to anonymous message page locally
+          console.log('💬 Navigating to anonymous message page for:', username);
+          router.push(`/ask/${encodeURIComponent(username)}`);
         } else if (type === 'url' && url) {
-          targetUrl = url;
+          console.log('🌐 Opening HOYN URL:', url);
+          window.open(url, '_blank', 'noopener,noreferrer');
         } else if (type === 'profile' && username) {
-          targetUrl = `https://hoyn.app/${encodeURIComponent(username)}`;
+          // Navigate to user profile locally (this will handle different modes)
+          console.log('👤 Navigating to user profile with mode:', mode || 'profile');
+          router.push(`/u/${encodeURIComponent(username)}`);
         } else {
           setError('HOYN! QR formatı tanınmadı');
           return;
         }
         
-        if (targetUrl) {
-          console.log('🚀 Opening HOYN! URL:', targetUrl);
-          window.open(targetUrl, '_blank', 'noopener,noreferrer');
-        }
       } else {
         // Regular QR codes - validate URL first
         try {
@@ -291,22 +299,28 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
       console.error('❌ Redirect error:', error);
       setError('Bağlantı açılırken hata oluştu');
     }
-  }, []);
+  }, [router]);
 
-  // Render scan result
+  // Render scan result with mode support
   const renderScanResult = (result: ScanResult) => {
-    // HOYN! profile QR code
+    // HOYN! profile QR code with mode display
     if (result.isHoynQR && result.type === 'profile' && result.parsedData) {
-      const { username, url } = result.parsedData;
+      const { username, mode } = result.parsedData;
+      const modeEmoji = mode === 'note' ? '📝' : mode === 'song' ? '🎵' : '👤';
+      const modeText = mode === 'note' ? 'Not Modu' : mode === 'song' ? 'Şarkı Modu' : 'Profil Modu';
       
       return (
         <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-2xl">👤</span>
-            <h3 className="font-bold text-purple-300">HOYN! Profil QR</h3>
+            <span className="text-2xl">{modeEmoji}</span>
+            <h3 className="font-bold text-purple-300">HOYN! Profil QR - {modeText}</h3>
           </div>
           <p className="text-white">Kullanıcı: <span className="font-mono">{username}</span></p>
-          <p className="text-gray-400 text-sm mt-1">Profil sayfasını açmak için 'Aç' butonuna tıklayın</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {mode === 'note' ? 'Kullanıcının özel notunu görmek için' :
+             mode === 'song' ? 'Kullanıcının şarkı önerisini dinlemek için' :
+             'Profil sayfasını açmak için'} 'Aç' butonuna tıklayın
+          </p>
         </div>
       );
     }

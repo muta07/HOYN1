@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo } from 'react';
 import { User } from 'firebase/auth';
-import { getUserDisplayName, getUserUsername, generateHOYNQR } from '@/lib/qr-utils';
+import { getUserDisplayName, getUserUsername, generateHOYNQR, generateHOYNQRWithMode } from '@/lib/qr-utils';
 import { UserProfile, BusinessProfile } from '@/lib/firebase';
 
 export type QRType = 'profile' | 'anonymous' | 'custom';
@@ -64,7 +64,7 @@ export function useQR(
 ): UseQRReturn {
   const [qrState, setQrState] = useState<QRState>(defaultState);
 
-  // Generate QR value based on current state
+  // Generate QR value based on current state with mode support
   const qrValue = useMemo(() => {
     if (!user) return '';
     
@@ -73,7 +73,9 @@ export function useQR(
     try {
       switch (qrState.type) {
         case 'profile':
-          return generateHOYNQR(username, 'profile');
+          // For profile QRs, use the mode-aware generator
+          // Note: This will be async in practice, but for now use default mode
+          return generateHOYNQR(username, 'profile', 'profile');
         case 'anonymous':
           return generateHOYNQR(username, 'anonymous');
         case 'custom':
@@ -84,13 +86,13 @@ export function useQR(
               url: qrState.customValue.trim(),
               username: username,
               createdAt: new Date().toISOString(),
-              version: '1.0'
+              version: '1.1'
             };
             return JSON.stringify(hoynCustomData);
           }
-          return generateHOYNQR(username, 'profile');
+          return generateHOYNQR(username, 'profile', 'profile');
         default:
-          return generateHOYNQR(username, 'profile');
+          return generateHOYNQR(username, 'profile', 'profile');
       }
     } catch (error) {
       console.error('QR value generation error:', error);
