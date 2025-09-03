@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { getUserDisplayName, getUserUsername, updateUserNickname, updateBusinessNickname } from '@/lib/qr-utils';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
+import ProfileStats from '@/components/ui/ProfileStats';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -92,6 +93,11 @@ export default function ProfilePage() {
         <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-8 text-center">
           Profilini Yönet
         </h1>
+
+        {/* Profile Statistics */}
+        <div className="mb-10">
+          <ProfileStats userId={user.uid} isOwnProfile={true} />
+        </div>
 
         <div className="grid md:grid-cols-2 gap-10">
           {/* Sol: Profil Formu */}

@@ -6,6 +6,7 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import AnimatedCard from '@/components/ui/AnimatedCard';
+import { incrementQRScans } from '@/lib/stats';
 
 interface QRScannerProps {
   className?: string;
@@ -133,6 +134,19 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
 
     setScanResult(scanData);
     setScanHistory(prev => [scanData, ...prev.slice(0, 9)]); // Keep last 10 scans
+    
+    // Track stats for HOYN! QR codes
+    if (isHoyn && parsedData?.username) {
+      // Extract username from different QR types
+      const targetUsername = parsedData.username;
+      
+      // Increment scan count for the QR code owner (async, don't wait)
+      incrementQRScans(targetUsername).catch(error => {
+        console.error('Failed to track QR scan stats:', error);
+      });
+      
+      console.log('📊 QR scan tracked for user:', targetUsername);
+    }
     
     // Call external handler
     onScanSuccess?.(result);
