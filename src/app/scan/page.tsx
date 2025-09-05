@@ -40,7 +40,7 @@ export default function ScanPage() {
     }
   }, [user, authLoading, router]);
 
-  // Handle scan results
+  // Handle scan results with improved parsing
   const handleScan = (result: string) => {
     if (!result) return;
     
@@ -48,24 +48,67 @@ export default function ScanPage() {
     setScannedData(result);
     setError('');
     
-    // HOYN! QR formatını kontrol et
+    // First, try to parse as HOYN! QR
     const parsedData = parseHOYNQR(result);
     
     if (parsedData) {
-      // HOYN! QR bulundu!
+      // HOYN! QR found!
       setIsHoynQR(true);
       setQrData(parsedData);
       
       // Analytics tracking
       trackQRScan(parsedData, { scannedBy: user?.uid });
       
-      // Otomatik yönlendirme
+      // Auto redirect
       checkAndRedirect(parsedData);
     } else {
-      // HOYN! QR değil
+      // Try to parse as a URL or username
+      try {
+        // Check if it's a full URL
+        if (result.startsWith('http://') || result.startsWith('https://')) {
+          const url = new URL(result);
+          
+          // Check if it's our own domain
+          if (url.origin === window.location.origin) {
+            // It's our domain, redirect directly
+            setIsRedirecting(true);
+            setTimeout(() => {
+              window.location.href = result;
+            }, 1000);
+            return;
+          } else {
+            // External URL - open in new tab
+            window.open(result, '_blank');
+            return;
+          }
+        }
+        
+        // Check if it's a username (starts with @)
+        if (result.startsWith('@')) {
+          const username = result.substring(1);
+          setIsRedirecting(true);
+          setTimeout(() => {
+            router.push(`/u/${username}`);
+          }, 1000);
+          return;
+        }
+        
+        // Check if it's a plain username
+        if (result.length > 0 && !result.includes(' ')) {
+          setIsRedirecting(true);
+          setTimeout(() => {
+            router.push(`/u/${result}`);
+          }, 1000);
+          return;
+        }
+      } catch (urlError) {
+        console.log('Not a valid URL or username format');
+      }
+      
+      // Not a HOYN! QR or recognizable format
       setIsHoynQR(false);
       setQrData(null);
-      // 3 saniye sonra uyarı göster
+      // Show warning after 1 second
       setTimeout(() => {
         if (!isHoynQR) {
           setError('Bu bir HOYN! QR kodu değil. Sadece HOYN! QR kodları desteklenir.');
@@ -74,13 +117,13 @@ export default function ScanPage() {
     }
   };
 
-  // Check if HOYN! QR and redirect
+  // Check if HOYN! QR and redirect with improved logic
   const checkAndRedirect = async (qrData: any) => {
     if (!qrData) return;
     
     setIsRedirecting(true);
     
-    // 2 saniye bekle, sonra yönlendir
+    // Wait 2 seconds, then redirect
     setTimeout(() => {
       if (qrData.type === 'profile' && qrData.username) {
         router.push(`/u/${qrData.username}`);
@@ -90,7 +133,22 @@ export default function ScanPage() {
         window.open(qrData.url, '_blank');
         setIsRedirecting(false);
       } else if (qrData.url) {
-        window.open(qrData.url, '_blank');
+        // Validate URL before opening
+        try {
+          const url = new URL(qrData.url);
+          if (url.origin === window.location.origin) {
+            // Internal URL
+            window.location.href = qrData.url;
+          } else {
+            // External URL
+            window.open(qrData.url, '_blank');
+          }
+        } catch (urlError) {
+          console.error('Invalid URL:', qrData.url);
+          window.open(qrData.url, '_blank');
+        }
+        setIsRedirecting(false);
+      } else {
         setIsRedirecting(false);
       }
     }, 2000);
@@ -180,8 +238,8 @@ export default function ScanPage() {
                      qrData.type === 'anonymous' ? '💬' : '🔗'}
                   </span>
                   <h4 className="font-bold text-purple-300">
-                    {qrData.type === 'profile' ? 'Profil QR\'\u0131' : 
-                     qrData.type === 'anonymous' ? 'Anonim Mesaj QR\'\u0131' : 'Özel QR'}
+                    {qrData.type === 'profile' ? 'Profil QR\'ı' : 
+                     qrData.type === 'anonymous' ? 'Anonim Mesaj QR\'ı' : 'Özel QR'}
                   </h4>
                 </div>
                 
@@ -225,7 +283,19 @@ export default function ScanPage() {
                       } else if (qrData.type === 'anonymous') {
                         router.push(`/ask/${qrData.username}`);
                       } else if (qrData.url) {
-                        window.open(qrData.url, '_blank');
+                        try {
+                          const url = new URL(qrData.url);
+                          if (url.origin === window.location.origin) {
+                            // Internal URL
+                            window.location.href = qrData.url;
+                          } else {
+                            // External URL
+                            window.open(qrData.url, '_blank');
+                          }
+                        } catch (urlError) {
+                          console.error('Invalid URL:', qrData.url);
+                          window.open(qrData.url, '_blank');
+                        }
                       }
                     }}
                     variant="primary"

@@ -4,9 +4,10 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getUserDisplayName } from '@/lib/qr-utils';
-import QRGenerator from '@/components/qr';
+import { getUserDisplayName, getUserUsername } from '@/lib/qr-utils';
+import ClientQRGenerator from '@/components/qr/ClientQRGenerator';
 import Loading from '@/components/ui/Loading';
+import NeonButton from '@/components/ui/NeonButton';
 
 export default function QRGeneratorPage() {
   const { user, profile, loading: authLoading } = useAuth();
@@ -32,6 +33,10 @@ export default function QRGeneratorPage() {
   if (!user) return null;
 
   const displayName = getUserDisplayName(user, profile);
+  const username = getUserUsername(user);
+  
+  // Create the profile URL for the QR code
+  const profileUrl = `${window.location.origin}/u/${username}`;
 
   return (
     <div className="min-h-screen bg-black text-white py-12 px-6">
@@ -49,7 +54,29 @@ export default function QRGeneratorPage() {
       </div>
 
       {/* QR Generator Component */}
-      <QRGenerator />
+      <div className="flex justify-center mb-8">
+        <ClientQRGenerator 
+          value={profileUrl} 
+          size={256}
+          bgColor="#ffffff"
+          fgColor="#9b5de5"
+          onReady={() => console.log('QR kod hazır')}
+        />
+      </div>
+      
+      {/* Test Link */}
+      <div className="text-center mt-8">
+        <NeonButton
+          onClick={() => router.push('/dashboard/qr-test')}
+          variant="outline"
+          size="md"
+        >
+          ✅ QR Test Sayfası
+        </NeonButton>
+        <p className="text-gray-400 text-sm mt-2">
+          QR kodun düzgün çalıştığını test edin
+        </p>
+      </div>
     </div>
   );
 }
