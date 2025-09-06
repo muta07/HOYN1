@@ -2,7 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile } from '@/lib/firebase';
+import { UserProfile, BusinessProfile } from '@/lib/firebase';
+
+// Update the type to accept both profile types
+type ProfileType = UserProfile | BusinessProfile;
 
 export interface ProfileCustomization {
   theme: 'cyberpunk' | 'neon' | 'minimal' | 'dark' | 'colorful' | 'retro';
@@ -26,7 +29,7 @@ interface ThemeContextType {
   setCustomization: (customization: ProfileCustomization | null) => void;
   getThemeStyles: () => React.CSSProperties;
   getThemeClasses: () => string;
-  applyProfileTheme: (profile: UserProfile) => void;
+  applyProfileTheme: (profile: ProfileType) => void;
   resetToDefault: () => void;
 }
 
@@ -141,8 +144,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const applyProfileTheme = (profile: UserProfile) => {
-    if (profile.profileCustomization && profile.profileCustomization.showCustomization) {
+  // Update this function to handle both profile types
+  const applyProfileTheme = (profile: ProfileType) => {
+    // Check if it's a UserProfile with profileCustomization
+    if ('profileCustomization' in profile && profile.profileCustomization && profile.profileCustomization.showCustomization) {
       setCustomization(profile.profileCustomization as ProfileCustomization);
     } else {
       setCustomization(defaultCustomization);
@@ -201,13 +206,13 @@ export function useTheme() {
   return context;
 }
 
-// Themed wrapper component for profile pages
+// Themed wrapper component for profile pages - updated to accept both profile types
 export function ThemedProfileWrapper({ 
   children, 
   profile 
 }: { 
   children: React.ReactNode; 
-  profile?: UserProfile | null;
+  profile?: ProfileType | null;
 }) {
   const { customization, applyProfileTheme, getThemeStyles, getThemeClasses } = useTheme();
 
