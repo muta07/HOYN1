@@ -205,6 +205,9 @@ export default function UserProfilePage({ params }: PageProps) {
   // Check if this is a business profile
   const isBusinessProfile = 'companyName' in userProfile;
   const businessProfile = isBusinessProfile ? userProfile as BusinessProfile : null;
+  
+  // Get bio - handle both profile types
+  const bio = 'bio' in userProfile ? userProfile.bio : businessProfile?.description;
 
   // Note Mode Display
   if (qrMode?.mode === 'note' && noteContent) {
@@ -466,259 +469,260 @@ export default function UserProfilePage({ params }: PageProps) {
                 </div>
               )}
               
-              {userProfile.bio && (
+              {bio && (
                 <ThemedText variant="muted" className="max-w-2xl mx-auto mb-4">
-                  {userProfile.bio}
+                  {bio}
                 </ThemedText>
               )}
             
             {/* Business Info */}
             {isBusinessProfile && (
-              <div className="max-w-2xl mx-auto mb-6">
-                {/* Founded Year & Employee Count */}
-                {(businessProfile?.foundedYear || businessProfile?.employeeCount) && businessProfile?.businessSettings?.showFoundedYear && (
-                  <div className="flex justify-center gap-6 text-sm mb-4">
-                    {businessProfile?.foundedYear && businessProfile?.businessSettings?.showFoundedYear && (
-                      <ThemedText size="sm" variant="muted">
-                        📅 {businessProfile.foundedYear} yılından beri
-                      </ThemedText>
-                    )}
-                    {businessProfile?.employeeCount && businessProfile?.businessSettings?.showEmployeeCount && (
-                      <ThemedText size="sm" variant="muted">
-                        👥 {businessProfile.employeeCount}
-                      </ThemedText>
-                    )}
-                  </div>
-                )}
-                
-                {/* Location */}
-                {businessProfile?.location?.city && businessProfile?.businessSettings?.showLocation && (
-                  <ThemedText size="sm" variant="muted" className="mb-4 block text-center">
-                    📍 {businessProfile.location.city}
-                    {businessProfile.location.district && `, ${businessProfile.location.district}`}
-                    {businessProfile.location.country && `, ${businessProfile.location.country}`}
-                  </ThemedText>
-                )}
-                
-                {/* Services */}
-                {businessProfile?.services && businessProfile.services.length > 0 && (
-                  <div className="mb-6">
-                    <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
-                      ⚙️ Hizmetlerimiz
-                    </ThemedText>
-                    <div className="flex flex-wrap justify-center gap-2">
-                      {businessProfile.services.slice(0, 6).map((service, index) => (
-                        <ThemedBadge key={index} variant="secondary" size="sm">
-                          {service}
-                        </ThemedBadge>
-                      ))}
-                      {businessProfile.services.length > 6 && (
-                        <ThemedBadge variant="accent" size="sm">
-                          +{businessProfile.services.length - 6} diğer
-                        </ThemedBadge>
+                <div className="max-w-2xl mx-auto mb-6">
+                  {/* Founded Year & Employee Count */}
+                  {(businessProfile?.foundedYear || businessProfile?.employeeCount) && businessProfile?.businessSettings?.showFoundedYear && (
+                    <div className="flex justify-center gap-6 text-sm mb-4">
+                      {businessProfile?.foundedYear && businessProfile?.businessSettings?.showFoundedYear && (
+                        <ThemedText size="sm" variant="muted">
+                          📅 {businessProfile.foundedYear} yılından beri
+                        </ThemedText>
                       )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Working Hours */}
-                {businessProfile?.workingHours && businessProfile?.businessSettings?.showWorkingHours && (
-                  <div className="mb-6">
-                    <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
-                      🕐 Çalışma Saatleri
-                    </ThemedText>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                      {Object.entries({
-                        monday: 'Pzt', tuesday: 'Sal', wednesday: 'Çar', thursday: 'Per',
-                        friday: 'Cum', saturday: 'Cmt', sunday: 'Paz'
-                      }).map(([day, shortName]) => {
-                        const hours = businessProfile.workingHours?.[day as keyof typeof businessProfile.workingHours];
-                        if (!hours) return null;
-                        return (
-                          <ThemedCard key={day} variant="secondary" className="p-2 text-center">
-                            <ThemedText weight="bold" variant="primary" size="sm" className="block">
-                              {shortName}
-                            </ThemedText>
-                            <ThemedText size="xs" variant="default">
-                              {hours}
-                            </ThemedText>
-                          </ThemedCard>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Social Stats and Follow Button */}
-          <div className="mb-8 space-y-4">
-            {/* Social Stats */}
-            <SocialStats 
-              userId={userProfile.uid}
-              username={userProfile.username}
-              initialFollowersCount={userProfile.followersCount || 0}
-              initialFollowingCount={userProfile.followingCount || 0}
-              variant="inline"
-              className="justify-center"
-              clickable={true}
-            />
-            
-            {/* Follow Button */}
-            <div className="flex justify-center">
-              <FollowButton
-                targetUserId={userProfile.uid}
-                targetUsername={userProfile.username}
-                targetDisplayName={displayName}
-                className="min-w-[200px]"
-              />
-            </div>
-          </div>
-
-          {/* Profile Statistics */}
-          <div className="mb-10">
-            <ProfileStats 
-              userId={userProfile.uid} 
-              isOwnProfile={currentUser?.uid === userProfile.uid} 
-            />
-          </div>
-
-          {/* Social Links & Contact */}
-          {(userProfile.instagram || userProfile.twitter || 
-            (isBusinessProfile && (businessProfile?.socialMedia?.instagram || 
-             businessProfile?.socialMedia?.facebook || businessProfile?.socialMedia?.linkedin || 
-             businessProfile?.phone || businessProfile?.website))) && (
-            <div className="mb-10">
-              {/* Personal Social Media */}
-              {(userProfile.instagram || userProfile.twitter) && (
-                <div className="flex justify-center gap-4 mb-4">
-                  {userProfile.instagram && (
-                    <ThemedButton
-                      onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
-                      variant="secondary"
-                      size="md"
-                    >
-                      📸 Instagram
-                    </ThemedButton>
-                  )}
-                  {userProfile.twitter && (
-                    <ThemedButton
-                      onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
-                      variant="secondary"
-                      size="md"
-                    >
-                      🐦 Twitter
-                    </ThemedButton>
-                  )}
-                </div>
-              )}
-              
-              {/* Business Social Media & Contact */}
-              {isBusinessProfile && (
-                <div className="space-y-4">
-                  {/* Business Social Media */}
-                  {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
-                    businessProfile?.socialMedia?.linkedin) && (
-                    <div className="flex justify-center gap-3 flex-wrap">
-                      {businessProfile?.socialMedia?.instagram && (
-                        <NeonButton
-                          onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          📸 Instagram
-                        </NeonButton>
-                      )}
-                      {businessProfile?.socialMedia?.facebook && (
-                        <NeonButton
-                          onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          🔵 Facebook
-                        </NeonButton>
-                      )}
-                      {businessProfile?.socialMedia?.linkedin && (
-                        <NeonButton
-                          onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
-                          variant="secondary"
-                          size="sm"
-                        >
-                          💼 LinkedIn
-                        </NeonButton>
+                      {businessProfile?.employeeCount && businessProfile?.businessSettings?.showEmployeeCount && (
+                        <ThemedText size="sm" variant="muted">
+                          👥 {businessProfile.employeeCount}
+                        </ThemedText>
                       )}
                     </div>
                   )}
                   
-                  {/* Business Contact */}
-                  {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
-                    <div className="flex justify-center gap-3 flex-wrap">
-                      {businessProfile?.phone && (
-                        <NeonButton
-                          onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          📞 {businessProfile.phone}
-                        </NeonButton>
-                      )}
-                      {businessProfile?.contactInfo?.whatsapp && (
-                        <NeonButton
-                          onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          📱 WhatsApp
-                        </NeonButton>
-                      )}
-                      {businessProfile?.website && (
-                        <NeonButton
-                          onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
-                          variant="outline"
-                          size="sm"
-                        >
-                          🌐 Website
-                        </NeonButton>
-                      )}
+                  {/* Location */}
+                  {businessProfile?.location?.city && businessProfile?.businessSettings?.showLocation && (
+                    <ThemedText size="sm" variant="muted" className="mb-4 block text-center">
+                      📍 {businessProfile.location.city}
+                      {businessProfile.location.district && `, ${businessProfile.location.district}`}
+                      {businessProfile.location.country && `, ${businessProfile.location.country}`}
+                    </ThemedText>
+                  )}
+                  
+                  {/* Services */}
+                  {businessProfile?.services && businessProfile.services.length > 0 && (
+                    <div className="mb-6">
+                      <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
+                        ⚙️ Hizmetlerimiz
+                      </ThemedText>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        {businessProfile.services.slice(0, 6).map((service, index) => (
+                          <ThemedBadge key={index} variant="secondary" size="sm">
+                            {service}
+                          </ThemedBadge>
+                        ))}
+                        {businessProfile.services.length > 6 && (
+                          <ThemedBadge variant="accent" size="sm">
+                            +{businessProfile.services.length - 6} diğer
+                          </ThemedBadge>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Working Hours */}
+                  {businessProfile?.workingHours && businessProfile?.businessSettings?.showWorkingHours && (
+                    <div className="mb-6">
+                      <ThemedText size="base" weight="bold" variant="primary" className="mb-3 block text-center">
+                        🕐 Çalışma Saatleri
+                      </ThemedText>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                        {Object.entries({
+                          monday: 'Pzt', tuesday: 'Sal', wednesday: 'Çar', thursday: 'Per',
+                          friday: 'Cum', saturday: 'Cmt', sunday: 'Paz'
+                        }).map(([day, shortName]) => {
+                          const hours = businessProfile.workingHours?.[day as keyof typeof businessProfile.workingHours];
+                          if (!hours) return null;
+                          return (
+                            <ThemedCard key={day} variant="secondary" className="p-2 text-center">
+                              <ThemedText weight="bold" variant="primary" size="sm" className="block">
+                                {shortName}
+                              </ThemedText>
+                              <ThemedText size="xs" variant="default">
+                                {hours}
+                              </ThemedText>
+                            </ThemedCard>
+                          );
+                        })}
+                      </div>
                     </div>
                   )}
                 </div>
               )}
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="text-center space-y-4">
-            {userProfile.allowAnonymous !== false && (
-              <div>
-                <ThemedButton
-                  onClick={() => router.push(`/ask/${userProfile.username}`)}
-                  variant="primary"
-                  size="lg"
-                  glow
-                  className="w-full max-w-md"
-                >
-                  💬 Anonim Mesaj Gönder
-                </ThemedButton>
-                <ThemedText size="sm" variant="muted" className="mt-2 block">
-                  Kimliğin gizli kalacak, sadece mesajın iletilecek
-                </ThemedText>
+            {/* Social Stats and Follow Button */}
+            <div className="mb-8 space-y-4">
+              {/* Social Stats */}
+              <SocialStats 
+                userId={userProfile.uid}
+                username={userProfile.username}
+                initialFollowersCount={userProfile.followersCount || 0}
+                initialFollowingCount={userProfile.followingCount || 0}
+                variant="inline"
+                className="justify-center"
+                clickable={true}
+              />
+              
+              {/* Follow Button */}
+              <div className="flex justify-center">
+                <FollowButton
+                  targetUserId={userProfile.uid}
+                  targetUsername={userProfile.username}
+                  targetDisplayName={displayName}
+                  className="min-w-[200px]"
+                />
+              </div>
+            </div>
+
+            {/* Profile Statistics */}
+            <div className="mb-10">
+              <ProfileStats 
+                userId={userProfile.uid} 
+                isOwnProfile={currentUser?.uid === userProfile.uid} 
+              />
+            </div>
+
+            {/* Social Links & Contact */}
+            {(userProfile.instagram || userProfile.twitter || 
+              (isBusinessProfile && (businessProfile?.socialMedia?.instagram || 
+               businessProfile?.socialMedia?.facebook || businessProfile?.socialMedia?.linkedin || 
+               businessProfile?.phone || businessProfile?.website))) && (
+              <div className="mb-10">
+                {/* Personal Social Media */}
+                {('instagram' in userProfile || 'twitter' in userProfile) && (
+                  <div className="flex justify-center gap-4 mb-4">
+                    {userProfile.instagram && (
+                      <ThemedButton
+                        onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
+                        variant="secondary"
+                        size="md"
+                      >
+                        📸 Instagram
+                      </ThemedButton>
+                    )}
+                    {userProfile.twitter && (
+                      <ThemedButton
+                        onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
+                        variant="secondary"
+                        size="md"
+                      >
+                        🐦 Twitter
+                      </ThemedButton>
+                    )}
+                  </div>
+                )}
+                
+                {/* Business Social Media & Contact */}
+                {isBusinessProfile && (
+                  <div className="space-y-4">
+                    {/* Business Social Media */}
+                    {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
+                      businessProfile?.socialMedia?.linkedin) && (
+                      <div className="flex justify-center gap-3 flex-wrap">
+                        {businessProfile?.socialMedia?.instagram && (
+                          <NeonButton
+                            onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            📸 Instagram
+                          </NeonButton>
+                        )}
+                        {businessProfile?.socialMedia?.facebook && (
+                          <NeonButton
+                            onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            🔵 Facebook
+                          </NeonButton>
+                        )}
+                        {businessProfile?.socialMedia?.linkedin && (
+                          <NeonButton
+                            onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            💼 LinkedIn
+                          </NeonButton>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Business Contact */}
+                    {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
+                      <div className="flex justify-center gap-3 flex-wrap">
+                        {businessProfile?.phone && (
+                          <NeonButton
+                            onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            📞 {businessProfile.phone}
+                          </NeonButton>
+                        )}
+                        {businessProfile?.contactInfo?.whatsapp && (
+                          <NeonButton
+                            onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            📱 WhatsApp
+                          </NeonButton>
+                        )}
+                        {businessProfile?.website && (
+                          <NeonButton
+                            onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            🌐 Website
+                          </NeonButton>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
-            
-            <ThemedButton
-              onClick={() => router.push('/')}
-              variant="outline"
-              size="md"
-              className="w-full max-w-md"
-            >
-              🏠 Ana Sayfaya Dön
-            </ThemedButton>
-          </div>
-        </ThemedCard>
+
+            {/* Actions */}
+            <div className="text-center space-y-4">
+              {userProfile.allowAnonymous !== false && (
+                <div>
+                  <ThemedButton
+                    onClick={() => router.push(`/ask/${userProfile.username}`)}
+                    variant="primary"
+                    size="lg"
+                    glow
+                    className="w-full max-w-md"
+                  >
+                    💬 Anonim Mesaj Gönder
+                  </ThemedButton>
+                  <ThemedText size="sm" variant="muted" className="mt-2 block">
+                    Kimliğin gizli kalacak, sadece mesajın iletilecek
+                  </ThemedText>
+                </div>
+              )}
+              
+              <ThemedButton
+                onClick={() => router.push('/')}
+                variant="outline"
+                size="md"
+                className="w-full max-w-md"
+              >
+                🏠 Ana Sayfaya Dön
+              </ThemedButton>
+            </div>
+          </ThemedCard>
+        </div>
       </div>
-    </div>
-    </ThemedProfileWrapper>
-  );
+      </ThemedProfileWrapper>
+    );
+  }
 }
