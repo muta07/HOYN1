@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, UserProfile } from '@/lib/firebase';
+import { db, UserProfile, BusinessProfile } from '@/lib/firebase';
 import { getUserQRMode, QRModeData, NoteContent, SongContent, getEmbedUrl } from '@/lib/qr-modes';
 import { incrementProfileViews } from '@/lib/stats';
 import { useAuth } from '@/hooks/useAuth';
@@ -12,11 +12,12 @@ import Loading from '@/components/ui/Loading';
 import NeonButton from '@/components/ui/NeonButton';
 import AnimatedCard from '@/components/ui/AnimatedCard';
 import ProfileStats from '@/components/ui/ProfileStats';
-import { BusinessProfile } from '@/lib/firebase';
 import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
 import { ThemedCard, ThemedButton, ThemedText, ThemedBadge } from '@/components/ui/ThemedComponents';
 import FollowButton from '@/components/social/FollowButton';
 import SocialStats from '@/components/social/SocialStats';
+
+type ProfileType = UserProfile | BusinessProfile;
 
 interface PageProps {
   params: {
@@ -29,7 +30,7 @@ export default function UserProfilePage({ params }: PageProps) {
   const { user: currentUser } = useAuth();
   const router = useRouter();
   
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<ProfileType | null>(null);
   const [qrMode, setQrMode] = useState<QRModeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,11 +200,11 @@ export default function UserProfilePage({ params }: PageProps) {
   }
 
   // Get display name
-  const displayName = userProfile.nickname || userProfile.displayName || userProfile.username;
+  const displayName = 'displayName' in userProfile ? userProfile.displayName : userProfile.nickname || userProfile.username;
   
   // Check if this is a business profile
   const isBusinessProfile = 'companyName' in userProfile;
-  const businessProfile = isBusinessProfile ? userProfile as unknown as BusinessProfile : null;
+  const businessProfile = isBusinessProfile ? userProfile as BusinessProfile : null;
 
   // Note Mode Display
   if (qrMode?.mode === 'note' && noteContent) {

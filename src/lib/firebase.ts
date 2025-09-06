@@ -5,17 +5,21 @@ import { getFirestore } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 
-// User Profile Interface
-export interface UserProfile {
+// Base Profile Interface
+export interface BaseProfile {
   uid: string;
   email: string;
-  displayName: string; // Gerçek ad
-  nickname: string;    // Takma ad
-  bio?: string;
+  nickname: string;
   avatar?: string;
   createdAt: Date;
   updatedAt: Date;
-  username: string;    // Email'den türetilen unique username
+  username: string;
+}
+
+// User Profile Interface
+export interface UserProfile extends BaseProfile {
+  displayName: string; // Gerçek ad
+  bio?: string;
   
   // Social media links
   instagram?: string;
@@ -49,21 +53,14 @@ export interface UserProfile {
 }
 
 // Business Profile Interface
-export interface BusinessProfile {
-  uid: string;
-  email: string;
+export interface BusinessProfile extends BaseProfile {
   companyName: string;
   ownerName: string;
-  nickname: string;    // Business nickname/brand name
   businessType: string;
   address?: string;
   phone?: string;
   website?: string;
   description?: string;
-  avatar?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  username: string;    // Email'den türetilen unique username
   
   // Enhanced Business specific fields
   employees?: string[];
