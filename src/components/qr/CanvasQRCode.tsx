@@ -278,36 +278,55 @@ export default function CanvasQRCode({
           ref={canvasRef} 
           width={size} 
           height={size}
-          className="rounded-lg cyber-border"
+          className="rounded"
         />
-        
-        {/* Cyberpunk Border Glow */}
-        <div className="absolute inset-0 rounded-lg border-2 border-purple-500/30 opacity-50 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none glow-subtle"></div>
-        
-        {/* Success indicator */}
-        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
-          <span className="text-white text-xs font-bold">✓</span>
-        </div>
-        
-        {/* QR Info Badge */}
-        <div className="absolute -bottom-6 left-0 right-0 text-center">
-          <span className="inline-block bg-purple-900/80 text-purple-200 text-xs px-2 py-1 rounded-full">
-            HOYN! QR • {size}px
-          </span>
-        </div>
       </div>
       
-      <button
-        onClick={downloadQR}
-        disabled={!isQRReady || !!error}
-        className={`mt-4 px-4 py-2 rounded-lg transition-all transform shadow-lg ${
-          isQRReady && !error 
-            ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-500 hover:to-pink-500 hover:scale-105' 
-            : 'bg-gray-600 text-gray-400 cursor-not-allowed'
-        }`}
-      >
-        {isQRReady && !error ? '📦 QR İndir' : '⏳ Hazırlanıyor...'}
-      </button>
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={downloadQR}
+          disabled={!isQRReady || !!error}
+          className={`px-4 py-2 rounded-lg transition-all ${
+            isQRReady && !error 
+              ? 'bg-purple-600 text-white hover:bg-purple-700' 
+              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          📱 PNG İndir
+        </button>
+        
+        <button
+          onClick={() => {
+            if (canvasRef.current) {
+              const svgData = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+                  <rect width="${size}" height="${size}" fill="${bgColor}" />
+                  <text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" font-family="Arial" font-size="${size/10}" fill="${fgColor}">
+                    QR Kod (SVG indirme desteklenmiyor)
+                  </text>
+                </svg>
+              `;
+              const blob = new Blob([svgData], { type: 'image/svg+xml' });
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = `hoyn-qr-${Date.now()}.svg`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              URL.revokeObjectURL(url);
+            }
+          }}
+          disabled={!isQRReady || !!error}
+          className={`px-4 py-2 rounded-lg transition-all ${
+            isQRReady && !error 
+              ? 'bg-blue-600 text-white hover:bg-blue-700' 
+              : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          🖼️ SVG İndir
+        </button>
+      </div>
     </div>
   );
 }

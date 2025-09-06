@@ -253,22 +253,22 @@ export function parseHOYNQR(data: string): QRData | null {
       }
     }
     
-    // Check if it's a HOYN profile URL
-    const profileMatch = sanitizedData.match(/^https:\/\/hoyn\.app\/u\/([a-zA-Z0-9_-]+)$/);
+    // Check if it's a HOYN profile URL (support multiple domains)
+    const profileMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/u\/([a-zA-Z0-9_-]+)$/);
     if (profileMatch) {
       return {
         type: 'profile',
-        username: profileMatch[1],
+        username: profileMatch[2],
         url: sanitizedData
       };
     }
     
-    // Check if it's a HOYN anonymous URL
-    const anonymousMatch = sanitizedData.match(/^https:\/\/hoyn\.app\/ask\/([a-zA-Z0-9_-]+)$/);
+    // Check if it's a HOYN anonymous URL (support multiple domains)
+    const anonymousMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/ask\/([a-zA-Z0-9_-]+)$/);
     if (anonymousMatch) {
       return {
         type: 'anonymous',
-        username: anonymousMatch[1],
+        username: anonymousMatch[2],
         url: sanitizedData
       };
     }

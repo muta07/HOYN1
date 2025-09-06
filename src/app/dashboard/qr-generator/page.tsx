@@ -55,17 +55,35 @@ export default function QRGeneratorPage() {
 
       {/* QR Generator Component */}
       <div className="flex justify-center mb-8">
-        <ClientQRGenerator 
-          value={profileUrl} 
-          size={256}
-          bgColor="#ffffff"
-          fgColor="#9b5de5"
-          onReady={() => console.log('QR kod hazır')}
-        />
+        <div className="p-8 bg-white rounded-xl">
+          <ClientQRGenerator 
+            value={profileUrl} 
+            size={256}
+            bgColor="#ffffff"
+            fgColor="#000000"
+            onReady={() => console.log('QR kod hazır')}
+          />
+        </div>
       </div>
       
+      {/* Info Section */}
+      <div className="max-w-2xl mx-auto text-center mb-8">
+        <div className="glass-effect p-6 rounded-xl cyber-border">
+          <h3 className="text-xl font-bold text-purple-300 mb-3">QR Kodun Hazır! 🎉</h3>
+          <p className="text-gray-300 mb-4">
+            Bu QR kodu tarandığında profilinize yönlendirir. QR kodunuzu indirip 
+            tişörtünüze, telefonunuza veya herhangi bir yere yapıştırabilirsiniz.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 text-sm">
+            <span className="bg-purple-900/50 px-3 py-1 rounded-full text-purple-300">👤 Profil</span>
+            <span className="bg-purple-900/50 px-3 py-1 rounded-full text-purple-300">📱 Mobil Uyumlu</span>
+            <span className="bg-purple-900/50 px-3 py-1 rounded-full text-purple-300">🖨️ Yazdırılabilir</span>
+          </div>
+        </div>
+      </div>
+
       {/* Test Link */}
-      <div className="text-center mt-8">
+      <div className="text-center">
         <NeonButton
           onClick={() => router.push('/dashboard/qr-test')}
           variant="outline"

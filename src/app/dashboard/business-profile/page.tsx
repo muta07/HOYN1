@@ -567,6 +567,22 @@ export default function BusinessProfilePage() {
                   </div>
                 )}
 
+                {/* QR Code Button */}
+                <div className="mt-6">
+                  <NeonButton
+                    onClick={() => router.push('/dashboard/qr-generator')}
+                    variant="primary"
+                    size="lg"
+                    glow
+                    className="w-full"
+                  >
+                    📱 İşletme QR Kodu Oluştur
+                  </NeonButton>
+                  <p className="text-center text-gray-400 text-sm mt-2">
+                    İşletmenizin profilini paylaşmak için QR kod oluşturun
+                  </p>
+                </div>
+
                 {/* Save Button */}
                 <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-gray-700">
                   <NeonButton

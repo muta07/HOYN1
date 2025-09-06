@@ -39,28 +39,67 @@ export default function ClientQRGenerator({
     return () => clearTimeout(timer);
   }, [onReady]);
 
-  const handleDownload = () => {
+  const handleDownload = (format: 'png' | 'svg' = 'png') => {
     if (!isReady) {
       alert('QR kod henüz hazır değil. Lütfen bekleyin.');
       return;
     }
 
     try {
-      // Get the canvas element by its ID
-      const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
-      if (!canvas) {
-        alert('QR indirme hatası: Canvas bulunamadı');
-        return;
+      if (format === 'png') {
+        // Get the canvas element by its ID
+        const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
+        if (!canvas) {
+          alert('QR indirme hatası: Canvas bulunamadı');
+          return;
+        }
+        
+        // Convert to data URL and trigger download
+        const dataURL = canvas.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.href = dataURL;
+        link.download = `hoyn-qr-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'svg') {
+        // Get the SVG element
+        const svgElement = document.querySelector('#qr-code-canvas + svg') as SVGSVGElement;
+        if (!svgElement) {
+          // Try to get the SVG directly
+          const svg = document.querySelector('svg');
+          if (!svg) {
+            alert('QR indirme hatası: SVG bulunamadı');
+            return;
+          }
+          
+          // Serialize SVG to string
+          const svgData = new XMLSerializer().serializeToString(svg);
+          const blob = new Blob([svgData], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `hoyn-qr-${Date.now()}.svg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        } else {
+          // Serialize SVG to string
+          const svgData = new XMLSerializer().serializeToString(svgElement);
+          const blob = new Blob([svgData], { type: 'image/svg+xml' });
+          const url = URL.createObjectURL(blob);
+          
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `hoyn-qr-${Date.now()}.svg`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+        }
       }
-      
-      // Convert to data URL and trigger download
-      const dataURL = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.href = dataURL;
-      link.download = `hoyn-qr-${Date.now()}.png`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
     } catch (error) {
       console.error('QR indirme hatası:', error);
       alert('QR indirme başarısız oldu. Lütfen tekrar deneyin.');
@@ -79,7 +118,7 @@ export default function ClientQRGenerator({
 
   return (
     <div className={`flex flex-col items-center ${className}`}>
-      <div className="relative p-4 bg-white rounded-lg">
+      <div className="relative p-4 bg-white rounded">
         {/* Using canvas render mode for better download support */}
         <QRCodeCanvas
           id="qr-code-canvas"
@@ -91,22 +130,36 @@ export default function ClientQRGenerator({
         />
       </div>
       
-      {/* Download button - disabled until QR is ready */}
-      <button
-        onClick={handleDownload}
-        disabled={!isReady}
-        className={`mt-4 px-6 py-3 rounded-lg font-bold transition-all ${
-          isReady 
-            ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-lg hover:shadow-purple-500/30' 
-            : 'bg-gray-600 text-gray-300 cursor-not-allowed'
-        }`}
-      >
-        {isReady ? '📱 QR Kodu İndir' : '⏳ Hazırlanıyor...'}
-      </button>
+      {/* Download buttons - disabled until QR is ready */}
+      <div className="flex gap-2 mt-4">
+        <button
+          onClick={() => handleDownload('png')}
+          disabled={!isReady}
+          className={`px-4 py-2 rounded transition-all ${
+            isReady 
+              ? 'bg-purple-600 hover:bg-purple-700 text-white' 
+              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+          }`}
+        >
+          📱 PNG İndir
+        </button>
+        
+        <button
+          onClick={() => handleDownload('svg')}
+          disabled={!isReady}
+          className={`px-4 py-2 rounded transition-all ${
+            isReady 
+              ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+              : 'bg-gray-600 text-gray-300 cursor-not-allowed'
+          }`}
+        >
+          🖼️ SVG İndir
+        </button>
+      </div>
       
       {/* Status indicator */}
       {isReady && (
-        <div className="mt-2 text-sm text-green-400 flex items-center">
+        <div className="mt-2 text-sm text-green-600 flex items-center">
           <span className="mr-1">✓</span> QR Kod hazır
         </div>
       )}

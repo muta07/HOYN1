@@ -479,13 +479,15 @@ export default function ProfilePage() {
                 Bu QR'ı taramak, seni tanımanı sağlar.
               </p>
             </div>
-            <a
-              href={`/ask/${getUserUsername(user)}`}
-              target="_blank"
-              className="text-purple-400 hover:text-purple-300 text-sm hover:underline transition-colors"
+            <NeonButton
+              onClick={() => router.push('/dashboard/qr-generator')}
+              variant="primary"
+              size="md"
+              glow
+              className="mt-4"
             >
-              → Anonim mesaj gönder
-            </a>
+              📱 QR Kod Oluştur
+            </NeonButton>
           </div>
         </div>
 
