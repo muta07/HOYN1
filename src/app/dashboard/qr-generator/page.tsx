@@ -36,7 +36,9 @@ export default function QRGeneratorPage() {
   const username = getUserUsername(user);
   
   // Create the profile URL for the QR code
-  const profileUrl = `${window.location.origin}/u/${username}`;
+  // Use environment variable for production domain, fallback to window.location.origin for development
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+  const profileUrl = `${baseUrl}/u/${username}`;
 
   return (
     <div className="min-h-screen bg-black text-white py-12 px-6">

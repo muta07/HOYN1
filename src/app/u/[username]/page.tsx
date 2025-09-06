@@ -44,58 +44,114 @@ export default function UserProfilePage({ params }: PageProps) {
         setLoading(true);
         setError(null);
 
-        // Find user by username (which comes from email)
+        // First, try to find user in 'users' collection
         const usersRef = collection(db, 'users');
-        const q = query(usersRef, where('username', '==', username));
-        const querySnapshot = await getDocs(q);
+        const userQuery = query(usersRef, where('username', '==', username));
+        const userQuerySnapshot = await getDocs(userQuery);
         
-        if (querySnapshot.empty) {
-          setError('Kullanıcı bulunamadı');
+        if (!userQuerySnapshot.empty) {
+          // Found in users collection
+          const userDoc = userQuerySnapshot.docs[0];
+          const userData = userDoc.data() as UserProfile;
+          setUserProfile(userData);
+          
+          // Load QR mode configuration
+          const qrModeData = await getUserQRMode(userData.uid);
+          setQrMode(qrModeData);
+
+          // Parse QR mode content
+          if (qrModeData?.mode === 'note' && qrModeData.content) {
+            try {
+              const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
+              setNoteContent(parsedNote);
+            } catch (error) {
+              // Fallback for plain text content
+              setNoteContent({ 
+                text: qrModeData.content, 
+                title: '', 
+                emoji: '📝' 
+              });
+            }
+          } else if (qrModeData?.mode === 'song' && qrModeData.content) {
+            try {
+              const parsedSong = JSON.parse(qrModeData.content) as SongContent;
+              setSongContent(parsedSong);
+            } catch (error) {
+              // Fallback for plain URL content
+              setSongContent({ 
+                url: qrModeData.content, 
+                platform: 'other', 
+                title: '', 
+                artist: '' 
+              });
+            }
+          }
+
+          // Increment profile views (if viewing someone else's profile)
+          if (currentUser && currentUser.uid !== userData.uid) {
+            incrementProfileViews(userData.uid).catch(error => {
+              console.error('Failed to track profile view:', error);
+            });
+          }
+          
           return;
         }
+        
+        // If not found in users, try businesses collection
+        const businessesRef = collection(db, 'businesses');
+        const businessQuery = query(businessesRef, where('username', '==', username));
+        const businessQuerySnapshot = await getDocs(businessQuery);
+        
+        if (!businessQuerySnapshot.empty) {
+          // Found in businesses collection
+          const businessDoc = businessQuerySnapshot.docs[0];
+          const businessData = businessDoc.data() as BusinessProfile;
+          setUserProfile(businessData);
+          
+          // Load QR mode configuration
+          const qrModeData = await getUserQRMode(businessData.uid);
+          setQrMode(qrModeData);
 
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data() as UserProfile;
-        setUserProfile(userData);
+          // Parse QR mode content
+          if (qrModeData?.mode === 'note' && qrModeData.content) {
+            try {
+              const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
+              setNoteContent(parsedNote);
+            } catch (error) {
+              // Fallback for plain text content
+              setNoteContent({ 
+                text: qrModeData.content, 
+                title: '', 
+                emoji: '📝' 
+              });
+            }
+          } else if (qrModeData?.mode === 'song' && qrModeData.content) {
+            try {
+              const parsedSong = JSON.parse(qrModeData.content) as SongContent;
+              setSongContent(parsedSong);
+            } catch (error) {
+              // Fallback for plain URL content
+              setSongContent({ 
+                url: qrModeData.content, 
+                platform: 'other', 
+                title: '', 
+                artist: '' 
+              });
+            }
+          }
 
-        // Load QR mode configuration
-        const qrModeData = await getUserQRMode(userData.uid);
-        setQrMode(qrModeData);
-
-        // Parse QR mode content
-        if (qrModeData?.mode === 'note' && qrModeData.content) {
-          try {
-            const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
-            setNoteContent(parsedNote);
-          } catch (error) {
-            // Fallback for plain text content
-            setNoteContent({ 
-              text: qrModeData.content, 
-              title: '', 
-              emoji: '📝' 
+          // Increment profile views (if viewing someone else's profile)
+          if (currentUser && currentUser.uid !== businessData.uid) {
+            incrementProfileViews(businessData.uid).catch(error => {
+              console.error('Failed to track profile view:', error);
             });
           }
-        } else if (qrModeData?.mode === 'song' && qrModeData.content) {
-          try {
-            const parsedSong = JSON.parse(qrModeData.content) as SongContent;
-            setSongContent(parsedSong);
-          } catch (error) {
-            // Fallback for plain URL content
-            setSongContent({ 
-              url: qrModeData.content, 
-              platform: 'other', 
-              title: '', 
-              artist: '' 
-            });
-          }
+          
+          return;
         }
-
-        // Increment profile views (if viewing someone else's profile)
-        if (currentUser && currentUser.uid !== userData.uid) {
-          incrementProfileViews(userData.uid).catch(error => {
-            console.error('Failed to track profile view:', error);
-          });
-        }
+        
+        // Not found in either collection
+        setError('Kullanıcı bulunamadı');
 
       } catch (error) {
         console.error('Error loading user profile:', error);

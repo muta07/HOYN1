@@ -254,7 +254,8 @@ export function parseHOYNQR(data: string): QRData | null {
     }
     
     // Check if it's a HOYN profile URL (support multiple domains)
-    const profileMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/u\/([a-zA-Z0-9_-]+)$/);
+    // Updated regex to match profile URLs from any domain
+    const profileMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/u\/([a-zA-Z0-9_-]+)(\?.*)?$/);
     if (profileMatch) {
       return {
         type: 'profile',
@@ -264,7 +265,8 @@ export function parseHOYNQR(data: string): QRData | null {
     }
     
     // Check if it's a HOYN anonymous URL (support multiple domains)
-    const anonymousMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/ask\/([a-zA-Z0-9_-]+)$/);
+    // Updated regex to match anonymous URLs from any domain
+    const anonymousMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/ask\/([a-zA-Z0-9_-]+)(\?.*)?$/);
     if (anonymousMatch) {
       return {
         type: 'anonymous',
@@ -296,9 +298,9 @@ export function generateHOYNQR(
   type: 'profile' | 'anonymous' = 'profile',
   mode?: 'profile' | 'note' | 'song'
 ): string {
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://hoyn-1.vercel.app' 
-    : `http://localhost:${process.env.PORT || 3000}`;
+  // Use environment variable for production domain, fallback to window.location.origin for development
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     
   const url = type === 'profile' 
     ? `${baseUrl}/u/${username}` 
