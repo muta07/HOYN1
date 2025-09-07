@@ -210,114 +210,100 @@ export function sanitizeQRData(data: string): string {
 }
 
 /**
- * Parses HOYN QR code data
+ * Parses HOYN QR code data (v1.2+)
+ * This function is robust and supports both URL-based and legacy JSON formats.
  */
 export function parseHOYNQR(data: string): QRData | null {
   try {
-    // Validate first
     if (!validateQRData(data)) return null;
-    
-    const sanitizedData = sanitizeQRData(data);
-    
-    // Check if it's JSON data (new HOYN! format with mode support)
-    if (sanitizedData.startsWith('{') && sanitizedData.endsWith('}')) {
-      try {
-        const parsed = JSON.parse(sanitizedData);
-        
-        // Check for new HOYN! format (v1.1+)
-        if (parsed.hoyn && parsed.type && parsed.username) {
-          const result: any = {
-            type: parsed.type,
-            username: parsed.username,
-            url: parsed.url
-          };
-          
-          // Include mode information for profile QRs
-          if (parsed.mode) {
-            result.mode = parsed.mode;
-          }
-          
-          console.log('🎯 Parsed HOYN QR with mode:', result);
-          return result;
+
+    // V2 (URL-based) format: https://hoyn.app/qr/v1?d=...
+    if (data.includes('/qr/v1')) {
+      const url = new URL(data);
+      if (url.searchParams.has('d')) {
+        const encodedData = url.searchParams.get('d')!;
+        let decodedData: string;
+
+        // Use Buffer in Node.js, atob in browser
+        if (typeof window === 'undefined') {
+          decodedData = Buffer.from(encodedData, 'base64url').toString('utf8');
+        } else {
+          const base64 = encodedData.replace(/-/g, '+').replace(/_/g, '/');
+          decodedData = decodeURIComponent(escape(window.atob(base64)));
         }
-        
-        // Legacy format support
-        if (parsed.hoyn && parsed.type) {
+
+        const payload = JSON.parse(decodedData);
+
+        // Validate payload
+        if (payload.h && payload.u && payload.t) {
+          console.log('🎯 Parsed HOYN QR v1.2 (URL format)', payload);
           return {
-            type: 'custom',
-            data: parsed
+            type: payload.t,
+            username: payload.u,
+            data: payload,
+            url: data
           };
         }
-      } catch (jsonError) {
-        console.log('Not valid JSON, checking URL format');
       }
     }
-    
-    // Check if it's a HOYN profile URL (support multiple domains)
-    // Updated regex to match profile URLs from any domain
-    const profileMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/u\/([a-zA-Z0-9_-]+)(\?.*)?$/);
-    if (profileMatch) {
-      return {
-        type: 'profile',
-        username: profileMatch[2],
-        url: sanitizedData
-      };
+
+    // V1 (Legacy JSON) format check
+    const sanitizedData = sanitizeQRData(data);
+    if (sanitizedData.startsWith('{') && sanitizedData.endsWith('}')) {
+      const parsed = JSON.parse(sanitizedData);
+      if (parsed.hoyn && parsed.type && parsed.username) {
+        console.log('🎯 Parsed HOYN QR v1.1 (Legacy JSON format)', parsed);
+        return {
+          type: parsed.type,
+          username: parsed.username,
+          url: parsed.url,
+          data: parsed
+        };
+      }
     }
-    
-    // Check if it's a HOYN anonymous URL (support multiple domains)
-    // Updated regex to match anonymous URLs from any domain
-    const anonymousMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/ask\/([a-zA-Z0-9_-]+)(\?.*)?$/);
-    if (anonymousMatch) {
-      return {
-        type: 'anonymous',
-        username: anonymousMatch[2],
-        url: sanitizedData
-      };
-    }
-    
-    // Treat as custom URL
-    if (sanitizedData.startsWith('http://') || sanitizedData.startsWith('https://')) {
-      return {
-        type: 'custom',
-        url: sanitizedData
-      };
-    }
-    
+
     return null;
   } catch (error) {
-    console.error('Error parsing QR data:', error);
+    // This is expected for non-Hoyn QR codes, so we don't log it as an error.
     return null;
   }
 }
 
 /**
- * Generates HOYN QR data with mode support
+ * Generates HOYN QR data (v1.2+ URL format)
  */
 export function generateHOYNQR(
   username: string, 
   type: 'profile' | 'anonymous' = 'profile',
   mode?: 'profile' | 'note' | 'song'
 ): string {
-  // Use environment variable for production domain, fallback to window.location.origin for development
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
     (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     
-  const url = type === 'profile' 
-    ? `${baseUrl}/u/${username}` 
-    : `${baseUrl}/ask/${username}`;
-    
-  // Create HOYN! formatted QR JSON
-  const hoynData = {
-    hoyn: true,
-    type: type,
-    url: url,
-    username: username,
-    mode: mode || 'profile', // Include QR mode for profile types
-    createdAt: new Date().toISOString(),
-    version: '1.1' // Updated version to support modes
+  // Compact payload to keep URL short
+  const payload = {
+    h: true, // hoyn
+    t: type, // type
+    u: username, // username
+    m: mode || 'profile', // mode
+    v: '1.2' // version
   };
+
+  const payloadString = JSON.stringify(payload);
+  let encodedData: string;
+
+  // Use Buffer in Node.js for server-side generation, btoa in browser
+  if (typeof window === 'undefined') {
+    encodedData = Buffer.from(payloadString).toString('base64url');
+  } else {
+    encodedData = btoa(unescape(encodeURIComponent(payloadString))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
   
-  return JSON.stringify(hoynData);
+  // The final URL that will be the content of the QR code
+  const finalUrl = `${baseUrl}/qr/v1?d=${encodedData}`;
+  console.log(`📦 Generated HOYN QR URL: ${finalUrl}`);
+  
+  return finalUrl;
 }
 
 /**

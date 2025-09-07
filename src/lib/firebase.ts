@@ -14,21 +14,19 @@ export interface BaseProfile {
   updatedAt: Date;
   username: string;
   
-  // Social features (Phase 5.3)
   followersCount?: number;
   followingCount?: number;
 }
 
-// Multiple Profiles Support
+// Updated HOYNProfile to use the new QR URL structure
 export interface HOYNProfile extends BaseProfile {
   id: string;
   ownerUid: string;
   type: 'personal' | 'business';
   qrData?: {
-    encryptedPayload: string;
+    qrUrl: string; // Stores the generated URL e.g., https://hoyn.app/qr/v1?d=...
     version: string;
     timestamp: Date;
-    checksum: string;
   };
   isActive: boolean;
   isPrimary: boolean;
@@ -37,23 +35,15 @@ export interface HOYNProfile extends BaseProfile {
 export type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
 
 export interface UserProfile extends BaseProfile {
-  displayName: string; // Gerçek ad
+  displayName: string;
   bio?: string;
-  
-  // Social media links
   instagram?: string;
   twitter?: string;
-  
-  // Settings
   allowAnonymous?: boolean;
-  
-  // QR Code fields
   qrGenerated?: boolean;
   qrMode?: 'profile' | 'note' | 'song';
   qrBase64?: string;
   qrGeneratedAt?: string;
-  
-  // Phase 5.2 - Profile customization
   profileCustomization?: {
     theme?: 'cyberpunk' | 'neon' | 'minimal' | 'dark' | 'colorful' | 'retro';
     primaryColor?: string;
@@ -73,7 +63,6 @@ export interface UserProfile extends BaseProfile {
   };
 }
 
-// Business Profile Interface
 export interface BusinessProfile extends BaseProfile {
   companyName: string;
   ownerName: string;
@@ -82,153 +71,71 @@ export interface BusinessProfile extends BaseProfile {
   phone?: string;
   website?: string;
   description?: string;
-  
-  // Enhanced Business specific fields
   employees?: string[];
   menuItems?: any[];
   qrCodes?: string[];
   isVerified?: boolean;
-  
-  // Phase 5.1 - New business fields
-  sector?: string;           // İş sektörü
-  foundedYear?: number;      // Kuruluş yılı
-  employeeCount?: string;    // Çalışan sayısı aralığı
-  services?: string[];       // Sunulan hizmetler
-  workingHours?: {
-    monday?: string;
-    tuesday?: string;
-    wednesday?: string;
-    thursday?: string;
-    friday?: string;
-    saturday?: string;
-    sunday?: string;
-  };
-  socialMedia?: {
-    instagram?: string;
-    facebook?: string;
-    twitter?: string;
-    linkedin?: string;
-    youtube?: string;
-  };
-  contactInfo?: {
-    whatsapp?: string;
-    telegram?: string;
-    email2?: string;         // İkinci email
-    fax?: string;
-  };
-  location?: {
-    latitude?: number;
-    longitude?: number;
-    city?: string;
-    district?: string;
-    country?: string;
-  };
-  businessSettings?: {
-    showEmployeeCount?: boolean;
-    showFoundedYear?: boolean;
-    showWorkingHours?: boolean;
-    allowDirectMessages?: boolean;
-    showLocation?: boolean;
-  };
+  sector?: string;
+  foundedYear?: number;
+  employeeCount?: string;
+  services?: string[];
+  workingHours?: { [key: string]: string };
+  socialMedia?: { [key: string]: string };
+  contactInfo?: { [key: string]: string };
+  location?: { [key: string]: any };
+  businessSettings?: { [key: string]: boolean };
 }
 
-// Firebase yapılandırması (Firebase v7.20.0+ uyumlu)
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDJN3wqeaNxmk9l1I3Lg3KD8r2G6ziMZxM",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "hoyn-demo.firebaseapp.com",
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://hoyn-demo-default-rtdb.firebaseio.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "hoyn-demo",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "hoyn-demo.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "818752786451",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:818752786451:web:d3dc938ad4ee898a9d6fe6",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-HQ6KYZZPQG"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
-// QR Encryption Utilities
-const HOYN_APP_SECRET = process.env.NEXT_PUBLIC_HOYN_QR_SECRET || 'hoyn-secret-key-2025'; // Should be proper env var
+// Removed old QR encryption functions to standardize logic in qr-utils.ts
 
-export function encryptHOYNQR(payload: string): string {
-  // Simple XOR encryption for demo - replace with proper AES in production
-  let encrypted = '';
-  for (let i = 0; i < payload.length; i++) {
-    encrypted += String.fromCharCode(payload.charCodeAt(i) ^ HOYN_APP_SECRET.charCodeAt(i % HOYN_APP_SECRET.length));
-  }
-  return btoa(encrypted); // Base64 encode
-}
-
-export function decryptHOYNQR(encrypted: string): string | null {
-  try {
-    const decoded = atob(encrypted);
-    let decrypted = '';
-    for (let i = 0; i < decoded.length; i++) {
-      decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ HOYN_APP_SECRET.charCodeAt(i % HOYN_APP_SECRET.length));
-    }
-    return decrypted;
-  } catch {
-    return null;
-  }
-}
-
-export function isHOYNQR(encryptedData: string): boolean {
-  const decrypted = decryptHOYNQR(encryptedData);
-  if (!decrypted) return false;
-  try {
-    const data = JSON.parse(decrypted);
-    return data.app === 'HOYN' && data.type === 'profile';
-  } catch {
-    return false;
-  }
-}
-
-export function generateQRPayload(profileId: string, username: string): string {
-  const payload = JSON.stringify({
-    app: 'HOYN',
-    type: 'profile',
-    version: '1.0',
-    profileId,
-    username,
-    timestamp: new Date().toISOString()
-  });
-  return encryptHOYNQR(payload);
-}
-
-// Firebase başlat - Next.js 14 App Router uyumlu
 declare global {
   var firebaseApp: import('firebase/app').FirebaseApp | undefined;
 }
 
 let app;
 
-// Global Firebase app instance for Next.js 14
-if (typeof window !== 'undefined') {
-  // Client-side
-  if (!globalThis.firebaseApp) {
-    app = initializeApp(firebaseConfig);
-    globalThis.firebaseApp = app;
-  } else {
-    app = globalThis.firebaseApp;
-  }
+if (typeof window !== 'undefined' && !globalThis.firebaseApp) {
+  app = initializeApp(firebaseConfig);
+  globalThis.firebaseApp = app;
+} else if (typeof window !== 'undefined') {
+  app = globalThis.firebaseApp!;
 } else {
-  // Server-side
+  // On the server, we might need to initialize it differently or ensure it's initialized.
+  // For now, this will re-initialize on the server on every import, which is not ideal.
+  // A better pattern for App Router is to use a singleton pattern.
   app = initializeApp(firebaseConfig);
 }
 
-// Multiple Profile Functions
-export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {
+// Updated createHOYNProfile to use the new standardized QR generation
+export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'>, isPrimary: boolean = false): Promise<HOYNProfile | null> {
   try {
+    // Dynamically import to prevent circular dependency
+    const { generateHOYNQR } = await import('./qr-utils');
+    
     const profileId = `${profileData.username}-${Date.now()}`;
     const profileRef = doc(db, 'profiles', profileId);
     
+    const qrUrl = generateHOYNQR(profileData.username, profileData.type as 'profile' | 'anonymous');
+
     const fullProfile: HOYNProfile = {
       ...profileData,
       id: profileId,
       ownerUid,
-      type: profileData.type,
       qrData: {
-        encryptedPayload: generateQRPayload(profileId, profileData.username),
-        version: '1.0',
+        qrUrl: qrUrl,
+        version: '1.2', // Corresponds to the new URL-based format
         timestamp: new Date(),
-        checksum: 'todo-hash'
       },
       isActive: true,
       isPrimary,
@@ -292,7 +199,6 @@ export async function trackQRScan(scannerUid: string, targetUsername: string, qr
   }
 }
 
-// Hizmetleri dışa aktar
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 export const database = getDatabase(app);
