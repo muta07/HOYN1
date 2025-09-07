@@ -5,12 +5,8 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import QRScannerWrapper from '@/components/qr/QRScannerWrapper';
 import ClientQRGenerator from '@/components/qr/ClientQRGenerator';
-import { 
-  generateQRPayload,
-  decryptHOYNQR,
-  isHOYNQR
-} from '@/lib/firebase';
-import { getUserUsername } from '@/lib/qr-utils';
+import { parseHOYNQR } from '@/lib/qr-utils';
+import { getUserUsername, generateHOYNQR } from '@/lib/qr-utils';
 import Loading from '@/components/ui/Loading';
 import NeonButton from '@/components/ui/NeonButton';
 import AnimatedCard from '@/components/ui/AnimatedCard';
@@ -21,8 +17,7 @@ export default function QRTestPage() {
   
   const [testMode, setTestMode] = useState<'generate' | 'scan'>('generate');
   const [scannedData, setScannedData] = useState<string | null>(null);
-  const [isHOYNQRCode, setIsHOYNQRCode] = useState<boolean | null>(null);
-  const [decryptedData, setDecryptedData] = useState<any>(null);
+  const [parsedQRData, setParsedQRData] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [scanning, setScanning] = useState(false);
@@ -47,29 +42,16 @@ export default function QRTestPage() {
   if (!user) return null;
 
   const username = getUserUsername(user);
-  const profileId = user.uid;
-  const encryptedPayload = generateQRPayload(profileId, username);
+  const qrUrl = generateHOYNQR(username);
 
   const handleScan = (data: string) => {
     setScannedData(data);
     setScanning(false);
     
-    // Check if it's a HOYN QR
-    const isHOYN = isHOYNQR(data);
-    setIsHOYNQRCode(isHOYN);
-    
-    if (isHOYN) {
-      // Decrypt HOYN QR
-      const decrypted = decryptHOYNQR(data);
-      if (decrypted) {
-        try {
-          const parsed = JSON.parse(decrypted);
-          setDecryptedData(parsed);
-        } catch (err: any) {
-          console.error('Failed to parse HOYN QR:', err);
-          setError('Şifreli QR kodu okunamadı');
-        }
-      }
+    // Parse HOYN QR
+    const parsed = parseHOYNQR(data);
+    if (parsed) {
+      setParsedQRData(parsed);
     } else {
       // Non-HOYN QR - show warning
       setShowWarning(true);
@@ -87,24 +69,21 @@ export default function QRTestPage() {
     }
     setShowWarning(false);
     setScannedData(null);
-    setIsHOYNQRCode(null);
-    setDecryptedData(null);
+    setParsedQRData(null);
     setError(null);
   };
 
   const handleCancelNonHOYN = () => {
     setShowWarning(false);
     setScannedData(null);
-    setIsHOYNQRCode(null);
-    setDecryptedData(null);
+    setParsedQRData(null);
     setError(null);
   };
 
   const handleStartScan = () => {
     setScanning(true);
     setScannedData(null);
-    setIsHOYNQRCode(null);
-    setDecryptedData(null);
+    setParsedQRData(null);
     setError(null);
     setShowWarning(false);
   };
@@ -167,7 +146,7 @@ export default function QRTestPage() {
             HOYN QR Test 🔄
           </h1>
           <p className="text-lg text-gray-300">
-            QR oluştur ve test et - HOYN şifreleme sistemi
+            QR oluştur ve test et - HOYN QR sistemi
           </p>
         </div>
 
@@ -199,11 +178,11 @@ export default function QRTestPage() {
             <AnimatedCard direction="up" className="text-center">
               <div className="mb-4">
                 <h3 className="text-2xl font-bold text-purple-300 mb-2">QR Kodu Oluştur</h3>
-                <p className="text-gray-300">Profilin için şifreli QR kodu</p>
+                <p className="text-gray-300">Profilin için HOYN QR kodu</p>
               </div>
               <div className="p-8 bg-white rounded-xl mb-4">
                 <ClientQRGenerator 
-                  value={encryptedPayload} 
+                  value={qrUrl} 
                   size={256}
                   bgColor="#ffffff"
                   fgColor="#000000"
@@ -211,9 +190,9 @@ export default function QRTestPage() {
                 />
               </div>
               <div className="text-sm text-gray-300">
-                <p><strong>Durum:</strong> HOYN Şifreli QR</p>
+                <p><strong>Durum:</strong> HOYN QR</p>
                 <p><strong>İçerik:</strong> {username} profili</p>
-                <p><strong>Test:</strong> Bu QR kodu HOYN tarayıcı ile okunabilir</p>
+                <p><strong>Test:</strong> Bu QR kodu HOYN kullanıcıları tarafından taranabilir</p>
               </div>
             </AnimatedCard>
 
@@ -222,23 +201,23 @@ export default function QRTestPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="text-green-400">
                   <span className="text-2xl">✅</span>
-                  <p className="mt-1">Şifreleme Başarılı</p>
-                  <p>HOYN algoritması ile korundu</p>
-                </div>
-                <div className="text-green-400">
-                  <span className="text-2xl">🔒</span>
-                  <p className="mt-1">Güvenli Payload</p>
-                  <p>Sadece HOYN tarayıcı açar</p>
-                </div>
-                <div className="text-yellow-400">
-                  <span className="text-2xl">⚠️</span>
-                  <p className="mt-1">Diğer Tarayıcılar</p>
-                  <p>Uyarı gösterir</p>
+                  <p className="mt-1">QR Oluşturuldu</p>
+                  <p>HOYN formatında</p>
                 </div>
                 <div className="text-green-400">
                   <span className="text-2xl">📱</span>
                   <p className="mt-1">Mobil Uyumlu</p>
                   <p>Telefon kamerası ile test</p>
+                </div>
+                <div className="text-yellow-400">
+                  <span className="text-2xl">⚠️</span>
+                  <p className="mt-1">Diğer Tarayıcılar</p>
+                  <p>Normal URL olarak açılır</p>
+                </div>
+                <div className="text-green-400">
+                  <span className="text-2xl">🔒</span>
+                  <p className="mt-1">HOYN Kullanıcıları</p>
+                  <p>Doğrudan profil sayfası</p>
                 </div>
               </div>
             </AnimatedCard>
@@ -262,7 +241,7 @@ export default function QRTestPage() {
               </p>
             </div>
 
-            {scannedData && isHOYNQRCode && (
+            {scannedData && parsedQRData && (
               <AnimatedCard direction="up" className="p-6">
                 <h3 className="text-xl font-bold text-green-400 mb-3">✅ HOYN QR Başarılı!</h3>
                 <div className="text-center mb-4">
@@ -276,15 +255,14 @@ export default function QRTestPage() {
                   </div>
                 </div>
                 <div className="text-sm text-gray-300">
-                  <p><strong>Durum:</strong> HOYN Şifreli QR</p>
-                  <p><strong>Kullanıcı:</strong> {decryptedData?.username}</p>
-                  <p><strong>Profil ID:</strong> {decryptedData?.profileId}</p>
-                  <p><strong>Zaman:</strong> {new Date(decryptedData?.timestamp).toLocaleString()}</p>
+                  <p><strong>Durum:</strong> HOYN QR</p>
+                  <p><strong>Kullanıcı:</strong> {parsedQRData.username}</p>
+                  <p><strong>Tip:</strong> {parsedQRData.type}</p>
                 </div>
               </AnimatedCard>
             )}
 
-            {scannedData && !isHOYNQRCode && !showWarning && (
+            {scannedData && !parsedQRData && !showWarning && (
               <AnimatedCard direction="up" className="p-6">
                 <h3 className="text-xl font-bold text-yellow-400 mb-3">⚠️ Normal QR Kodu</h3>
                 <div className="text-center mb-4">
@@ -300,7 +278,7 @@ export default function QRTestPage() {
                 <div className="text-sm text-gray-300">
                   <p><strong>Durum:</strong> Standart QR</p>
                   <p><strong>İçerik:</strong> {scannedData}</p>
-                  <p><strong>Test:</strong> HOYN tarayıcı uyarı gösterecek</p>
+                  <p><strong>Test:</strong> HOYN kullanıcıları için özel yönlendirme yok</p>
                 </div>
               </AnimatedCard>
             )}
@@ -331,7 +309,7 @@ export default function QRTestPage() {
             <p>2. <strong>Tara:</strong> Bu sayfada kamerayı aç ve kodu tara</p>
             <p>3. <strong>Sonuç:</strong> HOYN QR ✅ / Normal QR ⚠️</p>
             <p className="text-xs mt-4 text-purple-400">
-              Bu test HOYN şifreleme sisteminin çalışmasını doğrular
+              Bu test HOYN QR sisteminin çalışmasını doğrular
             </p>
           </div>
         </div>

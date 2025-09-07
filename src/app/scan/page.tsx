@@ -5,9 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import QRScannerWrapper from '@/components/qr/QRScannerWrapper';
 import { 
-  trackQRScan,
-  decryptHOYNQR,
-  isHOYNQR
+  trackQRScan
 } from '@/lib/firebase';
 import { parseHOYNQR } from '@/lib/qr-utils';
 import { incrementProfileViews } from '@/lib/stats';
@@ -21,8 +19,7 @@ export default function ScanPage() {
   const router = useRouter();
   
   const [scannedData, setScannedData] = useState<string | null>(null);
-  const [isHOYNQRCode, setIsHOYNQRCode] = useState<boolean | null>(null);
-  const [decryptedData, setDecryptedData] = useState<any>(null);
+  const [parsedQRData, setParsedQRData] = useState<any>(null);
   const [showWarning, setShowWarning] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +49,7 @@ export default function ScanPage() {
         }
         
         // If no username but has data, show profile info
-        setDecryptedData(result.data);
-        setIsHOYNQRCode(true);
+        setParsedQRData(result.data);
         return;
       } else if (result.type === 'third_party_warning') {
         // Third-party scanner warning
@@ -112,16 +108,14 @@ export default function ScanPage() {
   const handleCancelNonHOYN = () => {
     setShowWarning(false);
     setScannedData(null);
-    setIsHOYNQRCode(null);
-    setDecryptedData(null);
+    setParsedQRData(null);
     setError(null);
   };
 
   const handleStartScan = () => {
     setScanning(true);
     setScannedData(null);
-    setIsHOYNQRCode(null);
-    setDecryptedData(null);
+    setParsedQRData(null);
     setError(null);
     setShowWarning(false);
   };
