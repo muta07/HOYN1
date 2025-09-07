@@ -729,6 +729,5 @@ export default function UserProfilePage({ params }: PageProps) {
         </div>
       </div>
       </ThemedProfileWrapper>
-    );
-  }
+  );
 }

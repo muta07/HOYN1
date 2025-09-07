@@ -287,7 +287,7 @@ export default function QRScannerWrapper({ onScan, onError }: QRScannerWrapperPr
     <div className="relative w-full h-full">
       {/* QR Scanner with enhanced settings */}
       <Scanner 
-        onDecode={handleScan}
+        onScan={handleScan}
         onError={handleError}
         constraints={{
           video: {
