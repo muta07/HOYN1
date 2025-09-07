@@ -10,6 +10,21 @@ import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import ProfileStats from '@/components/ui/ProfileStats';
 
+// Helper function to safely get bio/description from profile
+const getProfileBio = (profile: any) => {
+  if (!profile) return 'HOYN! kullanıcısı';
+  
+  if ('bio' in profile) {
+    return profile.bio || 'HOYN! kullanıcısı';
+  }
+  
+  if ('description' in profile) {
+    return profile.description || 'HOYN! işletme kullanıcısı';
+  }
+  
+  return 'HOYN! kullanıcısı';
+};
+
 export default function LinktreeProfilePage() {
   const { user, profile, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -57,6 +72,7 @@ export default function LinktreeProfilePage() {
 
   const username = getUserDisplayName(user, profile);
   const userHandle = getUserUsername(user);
+  const profileBio = getProfileBio(profile);
 
   const modeInfo = formatQRModeDisplay(qrMode);
 
@@ -71,9 +87,7 @@ export default function LinktreeProfilePage() {
           <h1 className="text-3xl font-bold mb-1">{username}</h1>
           <p className="text-purple-300 mb-2">@{userHandle}</p>
           <p className="text-gray-400 text-sm">
-            {profile ? (
-              'bio' in profile ? profile.bio : profile.description
-            ) : 'HOYN! kullanıcısı'}
+            {profileBio}
           </p>
         </div>
 
@@ -93,7 +107,7 @@ export default function LinktreeProfilePage() {
               QR
             </div>
             <div>
-              <p className="font-medium">{modeInfo.label} Modu</p>
+              <p className="font-medium">{modeInfo.label}</p>
               <p className="text-xs text-gray-400">{modeInfo.description}</p>
             </div>
           </div>
