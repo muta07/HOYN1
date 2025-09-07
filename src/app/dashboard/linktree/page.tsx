@@ -71,7 +71,9 @@ export default function LinktreeProfilePage() {
           <h1 className="text-3xl font-bold mb-1">{username}</h1>
           <p className="text-purple-300 mb-2">@{userHandle}</p>
           <p className="text-gray-400 text-sm">
-            {profile?.bio || 'HOYN! kullanıcısı'}
+            {profile ? (
+              'bio' in profile ? profile.bio : profile.description
+            ) : 'HOYN! kullanıcısı'}
           </p>
         </div>
 
