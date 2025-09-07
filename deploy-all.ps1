@@ -121,7 +121,7 @@ if ($hfToken) {
     } catch {
         Write-Host "⚠️  Warning: Could not set Hugging Face token. You may need to set it manually in Vercel dashboard." -ForegroundColor Yellow
     }
-} else {
+ else {
     Write-Host "⚠️  Warning: No Hugging Face token provided. AI QR generation will use fallback mode." -ForegroundColor Yellow
 }
 
@@ -145,5 +145,5 @@ try {
 
 Write-Host "`n✅ Complete Deployment Process Finished!" -ForegroundColor Green
 Write-Host "GitHub Repository: https://github.com/$GithubUsername/$RepoName" -ForegroundColor Blue
-Write-Host "Vercel Application: https://$VercelProjectName.vercel.app" -ForegroundColor Blue
-}
+Write-Host ("Vercel Application: https://" + $VercelProjectName + ".vercel.app") -ForegroundColor Blue
+
