@@ -9,11 +9,9 @@ import { getUserQRMode, updateUserQRMode, QRMode, formatQRModeDisplay, validateN
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 import ProfileStats from '@/components/ui/ProfileStats';
-import { useSubscription } from '@/components/providers/SubscriptionProvider';
 
 export default function ProfilePage() {
   const { user, profile, loading: authLoading } = useAuth();
-  const { subscription, hasActiveSubscription, hasPremiumFeatures } = useSubscription();
   const router = useRouter();
 
   const [displayName, setDisplayName] = useState('');
@@ -172,204 +170,6 @@ export default function ProfilePage() {
           <ProfileStats userId={user.uid} isOwnProfile={true} />
         </div>
 
-        {/* Subscription Status */}
-        <div className="mb-10">
-          <div className="glass-effect p-8 rounded-xl cyber-border">
-            <h2 className="text-2xl font-bold text-white mb-6 glow-text flex items-center gap-2">
-              <span>💎</span>
-              Üyelik Durumu
-            </h2>
-            
-            {subscription ? (
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-bold text-lg">
-                      {subscription.planId === 'basic' && 'Basic Plan'}
-                      {subscription.planId === 'pro' && 'Pro Plan'}
-                      {subscription.planId === 'business' && 'Business Plan'}
-                    </span>
-                    {hasPremiumFeatures && (
-                      <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full">Premium</span>
-                    )}
-                  </div>
-                  <p className="text-gray-300 text-sm">
-                    {hasActiveSubscription 
-                      ? `Bitiş tarihi: ${subscription.endDate.toLocaleDateString('tr-TR')}` 
-                      : 'Üyeliğiniz sona ermiş'}
-                  </p>
-                </div>
-                
-                <NeonButton
-                  onClick={() => router.push('/subscription')}
-                  variant={hasActiveSubscription ? "outline" : "primary"}
-                  size="md"
-                >
-                  {hasActiveSubscription ? 'Üyeliği Yönet' : 'Premium Ol'}
-                </NeonButton>
-              </div>
-            ) : (
-              <div className="text-center py-4">
-                <Loading size="sm" text="Üyelik bilgileri yükleniyor..." />
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* QR Mode Configuration */}
-        <div className="mb-10">
-          <div className="glass-effect p-8 rounded-xl cyber-border">
-            <h2 className="text-2xl font-bold text-white mb-6 glow-text flex items-center gap-2">
-              <span>📱</span>
-              QR Kod Modu
-            </h2>
-            <p className="text-gray-300 mb-6">
-              QR kodun tarandığında ne gösterileceğini seç:
-            </p>
-            
-            {qrModeLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <Loading size="sm" text="QR modu yükleniyor..." />
-              </div>
-            ) : (
-              <>
-                {/* QR Mode Selection */}
-                <div className="grid md:grid-cols-3 gap-4 mb-6">
-                  {(['profile', 'note', 'song'] as QRMode[]).map((mode) => {
-                    const modeInfo = formatQRModeDisplay(mode);
-                    return (
-                      <button
-                        key={mode}
-                        onClick={() => setQrMode(mode)}
-                        className={`p-4 rounded-lg border transition-all text-center ${
-                          qrMode === mode
-                            ? 'border-purple-500 bg-purple-900/20 glow-subtle'
-                            : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                        }`}
-                      >
-                        <div className="text-3xl mb-2">{modeInfo.icon}</div>
-                        <div className="font-bold text-white mb-1">{modeInfo.label}</div>
-                        <div className="text-xs text-gray-400">{modeInfo.description}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Mode-specific Configuration */}
-                {qrMode === 'note' && (
-                  <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-6">
-                    <h3 className="font-bold text-purple-300 mb-4 flex items-center gap-2">
-                      <span>📝</span>
-                      Not Ayarları
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Not Başlığı (Opsiyonel)</label>
-                        <input
-                          type="text"
-                          value={noteContent.title}
-                          onChange={(e) => setNoteContent({...noteContent, title: e.target.value})}
-                          placeholder="Örn: Hoş geldin mesajım"
-                          className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                          maxLength={50}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-300 mb-1">Emoji (Opsiyonel)</label>
-                        <input
-                          type="text"
-                          value={noteContent.emoji}
-                          onChange={(e) => setNoteContent({...noteContent, emoji: e.target.value})}
-                          placeholder="📝"
-                          className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                          maxLength={5}
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-purple-300 mb-1">
-                          Not Metni <span className="text-red-400">*</span>
-                        </label>
-                        <textarea
-                          value={noteContent.text}
-                          onChange={(e) => setNoteContent({...noteContent, text: e.target.value})}
-                          placeholder="QR kod tarandığında gösterilecek mesajınız..."
-                          className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white h-24"
-                          maxLength={500}
-                          required
-                        />
-                        <div className="text-xs text-gray-400 mt-1">
-                          {noteContent.text.length}/500 karakter
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {qrMode === 'song' && (
-                  <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-6">
-                    <h3 className="font-bold text-purple-300 mb-4 flex items-center gap-2">
-                      <span>🎵</span>
-                      Şarkı Ayarları
-                    </h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-purple-300 mb-1">
-                          Şarkı URL'si <span className="text-red-400">*</span>
-                        </label>
-                        <input
-                          type="url"
-                          value={songContent.url}
-                          onChange={(e) => setSongContent({...songContent, url: e.target.value})}
-                          placeholder="Spotify veya YouTube linki..."
-                          className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                          required
-                        />
-                        <div className="text-xs text-gray-400 mt-1">
-                          Desteklenen platformlar: Spotify, YouTube
-                        </div>
-                      </div>
-                      <div className="grid md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-1">Şarkı Adı (Opsiyonel)</label>
-                          <input
-                            type="text"
-                            value={songContent.title}
-                            onChange={(e) => setSongContent({...songContent, title: e.target.value})}
-                            placeholder="Örn: Bohemian Rhapsody"
-                            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-300 mb-1">Sanatçı (Opsiyonel)</label>
-                          <input
-                            type="text"
-                            value={songContent.artist}
-                            onChange={(e) => setSongContent({...songContent, artist: e.target.value})}
-                            placeholder="Örn: Queen"
-                            className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {qrMode === 'profile' && (
-                  <div className="bg-green-900/10 border border-green-500/30 rounded-lg p-6">
-                    <h3 className="font-bold text-green-300 mb-2 flex items-center gap-2">
-                      <span>👤</span>
-                      Profil Modu
-                    </h3>
-                    <p className="text-gray-300 text-sm">
-                      QR kodun tarandığında normal profil sayfan açılacak. Ek ayar gerekmez.
-                    </p>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-
         <div className="grid md:grid-cols-2 gap-10">
           {/* Sol: Profil Formu */}
           <div className="bg-gray-900 p-8 rounded-xl border border-purple-900">
@@ -459,35 +259,172 @@ export default function ProfilePage() {
             </form>
           </div>
 
-          {/* Sağ: QR Önizleme */}
-          <div className="bg-gray-900 p-8 rounded-xl border border-purple-900 flex flex-col items-center">
-            <h2 className="text-2xl font-bold text-white mb-6">Profil Önizleme</h2>
-            <div className="p-6 bg-white rounded-xl mb-4">
-              {/* Placeholder QR Code */}
-              <div className="w-48 h-48 bg-black flex items-center justify-center text-white font-bold">
-                QR KOD
+          {/* Sağ: QR Ayarları ve Önizleme */}
+          <div className="space-y-8">
+            {/* QR Mode Configuration */}
+            <div className="glass-effect p-6 rounded-xl cyber-border">
+              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
+                <span>📱</span>
+                QR Kod Modu
+              </h2>
+              <p className="text-gray-300 mb-4">
+                QR kodun tarandığında ne gösterileceğini seç:
+              </p>
+              
+              {qrModeLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loading size="sm" text="Yükleniyor..." />
+                </div>
+              ) : (
+                <>
+                  {/* QR Mode Selection */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {(['profile', 'note', 'song'] as QRMode[]).map((mode) => {
+                      const modeInfo = formatQRModeDisplay(mode);
+                      return (
+                        <button
+                          key={mode}
+                          onClick={() => setQrMode(mode)}
+                          className={`p-3 rounded-lg border text-center ${
+                            qrMode === mode
+                              ? 'border-purple-500 bg-purple-900/20 glow-subtle'
+                              : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
+                          }`}
+                        >
+                          <div className="text-2xl mb-1">{modeInfo.icon}</div>
+                          <div className="text-xs font-medium">{modeInfo.label}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mode-specific Configuration */}
+                  {qrMode === 'note' && (
+                    <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-4">
+                      <h3 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
+                        <span>📝</span>
+                        Not Ayarları
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-300 mb-1">Başlık</label>
+                          <input
+                            type="text"
+                            value={noteContent.title}
+                            onChange={(e) => setNoteContent({...noteContent, title: e.target.value})}
+                            placeholder="Başlık"
+                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                            maxLength={50}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-purple-300 mb-1">
+                            Not Metni <span className="text-red-400">*</span>
+                          </label>
+                          <textarea
+                            value={noteContent.text}
+                            onChange={(e) => setNoteContent({...noteContent, text: e.target.value})}
+                            placeholder="Mesajınız..."
+                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white h-20 text-sm"
+                            maxLength={500}
+                            required
+                          />
+                          <div className="text-xs text-gray-400 mt-1">
+                            {noteContent.text.length}/500 karakter
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {qrMode === 'song' && (
+                    <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-4">
+                      <h3 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
+                        <span>🎵</span>
+                        Şarkı Ayarları
+                      </h3>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-purple-300 mb-1">
+                            Şarkı URL'si <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={songContent.url}
+                            onChange={(e) => setSongContent({...songContent, url: e.target.value})}
+                            placeholder="Spotify/YouTube linki..."
+                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-300 mb-1">Şarkı</label>
+                            <input
+                              type="text"
+                              value={songContent.title}
+                              onChange={(e) => setSongContent({...songContent, title: e.target.value})}
+                              placeholder="Şarkı adı"
+                              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-300 mb-1">Sanatçı</label>
+                            <input
+                              type="text"
+                              value={songContent.artist}
+                              onChange={(e) => setSongContent({...songContent, artist: e.target.value})}
+                              placeholder="Sanatçı"
+                              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {qrMode === 'profile' && (
+                    <div className="bg-green-900/10 border border-green-500/30 rounded-lg p-4">
+                      <h3 className="font-bold text-green-300 mb-2 flex items-center gap-2">
+                        <span>👤</span>
+                        Profil Modu
+                      </h3>
+                      <p className="text-gray-300 text-xs">
+                        QR kodun tarandığında normal profil sayfan açılacak.
+                      </p>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* QR Önizleme ve Oluştur Butonu */}
+            <div className="glass-effect p-6 rounded-xl cyber-border flex flex-col items-center">
+              <h2 className="text-2xl font-bold text-white mb-4">QR Önizleme</h2>
+              <div className="p-4 bg-white rounded-lg mb-4">
+                {/* Placeholder QR Code */}
+                <div className="w-32 h-32 bg-black flex items-center justify-center text-white font-bold text-xs">
+                  QR KOD
+                </div>
               </div>
+              <div className="text-center space-y-1 mb-4">
+                <p className="text-lg font-bold text-purple-300">
+                  {getUserDisplayName(user, profile)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  @{getUserUsername(user)}
+                </p>
+              </div>
+              <NeonButton
+                onClick={() => router.push('/dashboard/qr-generator')}
+                variant="primary"
+                size="sm"
+                glow
+                className="w-full"
+              >
+                📱 QR Kod Oluştur
+              </NeonButton>
             </div>
-            <div className="text-center space-y-2">
-              <p className="text-lg font-bold text-purple-300">
-                {getUserDisplayName(user, profile)}
-              </p>
-              <p className="text-sm text-gray-400">
-                @{getUserUsername(user)}
-              </p>
-              <p className="text-gray-300 text-sm mt-4">
-                Bu QR'ı taramak, seni tanımanı sağlar.
-              </p>
-            </div>
-            <NeonButton
-              onClick={() => router.push('/dashboard/qr-generator')}
-              variant="primary"
-              size="md"
-              glow
-              className="mt-4"
-            >
-              📱 QR Kod Oluştur
-            </NeonButton>
           </div>
         </div>
 
