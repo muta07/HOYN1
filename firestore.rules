@@ -1,0 +1,115 @@
+// Firestore Security Rules for HOYN! Platform
+// These rules ensure that users can only access their own data
+// Deploy with: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Users collection - users can only read/write their own profile
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow reading basic profile info for public profiles
+      allow read: if request.auth != null && 
+                     resource.data.get('isPublic', false) == true;
+    }
+    
+    // Business profiles - similar rules but with business-specific fields
+    match /businesses/{businessId} {
+      allow read, write: if request.auth != null && request.auth.uid == businessId;
+      
+      // Allow reading business profiles (they are generally public)
+      allow read: if request.auth != null;
+    }
+    
+    // Messages collection - users can read messages sent to them or by them
+    match /messages/{messageId} {
+      allow read: if request.auth != null && 
+                     (request.auth.uid == resource.data.to || 
+                      request.auth.uid == resource.data.from);
+      
+      allow create: if request.auth != null && 
+                       request.auth.uid == request.resource.data.from &&
+                       request.resource.data.keys().hasAll(['to', 'from', 'text', 'timestamp']);
+      
+      // Prevent message editing/deletion for privacy
+      allow update, delete: if false;
+    }
+    
+    // User statistics - only the user can read/write their stats
+    match /stats/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow incrementing counters from any authenticated user (for views/scans)
+      allow update: if request.auth != null && 
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['views', 'scans', 'clicks', 'lastUpdated']);
+                       
+      // Allow creating initial stats document for any user
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasAll(['userId', 'scans', 'views', 'clicks']);
+    }
+    
+    // QR codes collection - users can manage their own QR codes
+    match /qrcodes/{qrId} {
+      allow read, write: if request.auth != null && 
+                            request.auth.uid == resource.data.get('userId', '');
+      
+      // Allow reading public QR codes
+      allow read: if request.auth != null && 
+                     resource.data.get('isPublic', false) == true;
+    }
+    
+    // QR modes collection - users can manage their own QR display modes
+    match /qr_modes/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate QR mode data structure
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.data.keys().hasAll(['mode', 'content', 'userId']) &&
+                      request.resource.data.mode in ['profile', 'note', 'song'];
+    }
+    
+    // Anonymous messages - special handling for anonymous communication
+    match /anonymous_messages/{messageId} {
+      // Allow creating anonymous messages to any user
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasAll(['to', 'text', 'timestamp', 'anonymous']);
+      
+      // Allow reading messages sent to the authenticated user
+      allow read: if request.auth != null && 
+                     request.auth.uid == resource.data.to;
+      
+      // No updates or deletes for privacy
+      allow update, delete: if false;
+    }
+    
+    // User uploads/files - users can manage their own uploads
+    match /uploads/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User mockups for design studio - users can manage their own mockups
+    match /user-mockups/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // User exported designs - users can manage their own exports
+    match /user-exports/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public data that anyone can read (e.g., app configuration)
+    match /public/{document=**} {
+      allow read: if true;
+      allow write: if false; // Only admins can write (handled via Cloud Functions)
+    }
+    
+    // Default deny rule - explicitly deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

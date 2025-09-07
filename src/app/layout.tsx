@@ -1,6 +1,10 @@
 // src/app/layout.tsx
-import Navbar from '@/components/Navbar'; // 
+import Navbar from '@/components/Navbar';
+import BottomNavigation from '@/components/BottomNavigation';
+import { ThemeProvider } from '@/components/providers/ThemeProvider';
+import { SubscriptionProvider } from '@/components/providers/SubscriptionProvider';
 import '@/styles/globals.css';
+import FloatingProfileButton from '@/components/ui/FloatingProfileButton';
 
 export default function RootLayout({
   children,
@@ -8,8 +12,14 @@ export default function RootLayout({
   return (
     <html lang="tr">
       <body className="bg-black text-white">
-        <Navbar />
-        <main className="min-h-screen pt-16">{children}</main>
+        <ThemeProvider>
+          <SubscriptionProvider>
+            <Navbar />
+            <main className="min-h-screen pt-16 pb-20">{children}</main>
+            <BottomNavigation />
+            <FloatingProfileButton />
+          </SubscriptionProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

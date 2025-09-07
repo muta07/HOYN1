@@ -199,6 +199,70 @@ body {
   transform-style: preserve-3d;
 }
 
+/* Themed Component Styles */
+.themed-profile-container {
+  transition: all 0.3s ease;
+}
+
+.glow-subtle {
+  box-shadow: 
+    0 0 3px currentColor,
+    0 0 8px currentColor;
+}
+
+.neon-glow {
+  box-shadow:
+    0 0 5px currentColor,
+    0 0 10px currentColor,
+    0 0 15px currentColor,
+    inset 0 0 5px currentColor;
+}
+
+.cyber-border-btn {
+  position: relative;
+  background: linear-gradient(45deg, transparent, transparent);
+}
+
+.cyber-border-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 2px;
+  background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: subtract;
+  z-index: -1;
+}
+
+/* Theme Specific Utilities */
+.theme-cyberpunk {
+  --glow-intensity: 15px;
+}
+
+.theme-neon {
+  --glow-intensity: 20px;
+}
+
+.theme-minimal {
+  --glow-intensity: 0px;
+}
+
+.theme-dark {
+  --glow-intensity: 5px;
+}
+
+.theme-colorful {
+  --glow-intensity: 10px;
+}
+
+.theme-retro {
+  --glow-intensity: 8px;
+}
+
 .parallax-element {
   transform: translateZ(0);
   will-change: transform;
