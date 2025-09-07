@@ -699,7 +699,7 @@ export default function UserProfilePage({ params }: PageProps) {
 
             {/* Actions */}
             <div className="text-center space-y-4">
-              {userProfile.allowAnonymous !== false && (
+              {('allowAnonymous' in userProfile && userProfile.allowAnonymous !== false) && (
                 <div>
                   <ThemedButton
                     onClick={() => router.push(`/ask/${userProfile.username}`)}
@@ -728,6 +728,7 @@ export default function UserProfilePage({ params }: PageProps) {
           </ThemedCard>
         </div>
       </div>
-    </ThemedProfileWrapper>
-  );
+      </ThemedProfileWrapper>
+    );
+  }
 }
