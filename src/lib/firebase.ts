@@ -1,10 +1,3 @@
-// src/lib/firebase.ts
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database';
-import { getStorage } from 'firebase/storage';
-
 // Base Profile Interface
 export interface BaseProfile {
   uid: string;
@@ -14,6 +7,10 @@ export interface BaseProfile {
   createdAt: Date;
   updatedAt: Date;
   username: string;
+  
+  // Social features (Phase 5.3)
+  followersCount?: number;
+  followingCount?: number;
 }
 
 // User Profile Interface
@@ -27,10 +24,6 @@ export interface UserProfile extends BaseProfile {
   
   // Settings
   allowAnonymous?: boolean;
-  
-  // Social features (Phase 5.3)
-  followersCount?: number;
-  followingCount?: number;
   
   // Phase 5.2 - Profile customization
   profileCustomization?: {
@@ -110,24 +103,3 @@ export interface BusinessProfile extends BaseProfile {
     showLocation?: boolean;
   };
 }
-
-// Firebase yapılandırması (Firebase v7.20.0+ uyumlu)
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDJN3wqeaNxmk9l1I3Lg3KD8r2G6ziMZxM",
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "hoyn-demo.firebaseapp.com",
-  databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL || "https://hoyn-demo-default-rtdb.firebaseio.com",
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "hoyn-demo",
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "hoyn-demo.firebasestorage.app",
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "818752786451",
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:818752786451:web:d3dc938ad4ee898a9d6fe6",
-  measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-HQ6KYZZPQG"
-};
-
-// Firebase başlat
-const app = initializeApp(firebaseConfig);
-
-// Hizmetleri dışa aktar
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const database = getDatabase(app);
-export const storage = getStorage(app);
