@@ -47,7 +47,7 @@ export default function DashboardPage() {
         <div className="text-center mb-16">
           <h1 className="text-6xl font-black glow-text font-orbitron mb-4 float
                          bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            {isBusinessAccount ? 'HOYN! Business' : 'HOYN! Panel'}
+            {isBusinessAccount ? 'HOYN! Business' : 'Profil'}
           </h1>
           <p className="text-xl text-gray-300 mb-4">
             Hoş geldin, <span className="text-purple-400 font-bold glow-text">{username}</span>!
@@ -58,33 +58,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Ana Eylem Butonları */}
-        <div className="grid md:grid-cols-2 gap-8 mb-16">
+        <div className="grid md:grid-cols-1 gap-8 mb-16">
           <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
-               onClick={() => router.push('/dashboard/qr-generator')}>
-            <div className="text-6xl mb-4 float">✨</div>
-            <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
-              {isBusinessAccount ? 'Business QR Oluştur' : 'QR Kod Oluştur'}
-            </h2>
-            <p className="text-gray-300 mb-6">
-              {isBusinessAccount 
-                ? 'İşletme QR’ını oluştur. Menü, iletişim, geri bildirim için kullan.'
-                : 'Kim olduğunu bir QR ile anlat. Tişörtüne bas, telefonuna yapıştır, dünyaya göster.'
-              }
-            </p>
-            <NeonButton variant="primary" size="md" glow>
-              🚀 QR Oluştur
-            </NeonButton>
-          </div>
-
-          <div className="glass-effect p-8 rounded-xl cyber-border hover:glow-intense transition-all duration-300 group cursor-pointer"
-               onClick={() => router.push('/dashboard/profile')}>
+               onClick={() => router.push(isBusinessAccount ? '/dashboard/business-profile' : '/dashboard/profile')}>
             <div className="text-6xl mb-4 float">{isBusinessAccount ? '🏢' : '👤'}</div>
             <h2 className="text-3xl font-bold text-white mb-4 group-hover:glow-text transition-all">
               {isBusinessAccount ? 'İşletme Profilini Yönet' : 'Profilini Yönet'}
             </h2>
             <p className="text-gray-300 mb-6">
               {isBusinessAccount
-                ? 'Şirket bilgileri, menü, çalışanlar – işletmeni özelleştir.'
+                ? 'Şirket bilgileri, hizmetler, çalışma saatleri, sosyal medya hesapları – işletmeni özelleştir.'
                 : 'Bio, sosyal medya, anonim soru ayarları – kim olduğunu özelleştir.'
               }
             </p>
@@ -131,6 +114,16 @@ export default function DashboardPage() {
             </h3>
             <p className="text-gray-400 text-sm">Hesap ve güvenlik ayarları</p>
           </div>
+        </div>
+
+        {/* Bilgi Mesajı */}
+        <div className="glass-effect p-6 rounded-xl cyber-border mb-8 text-center">
+          <p className="text-gray-300 mb-2">
+            📱 QR kodunuzu oluşturmak ve paylaşmak için sağ alttaki profil butonunu kullanın
+          </p>
+          <p className="text-sm text-gray-500">
+            QR kodunuzla tanışın, tişörtünüze basın, dünyaya gösterin!
+          </p>
         </div>
 
         {/* Çıkış Butonu */}

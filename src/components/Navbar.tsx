@@ -7,6 +7,7 @@ import { getUserDisplayName } from '@/lib/qr-utils';
 import { ROUTES } from '@/lib/constants';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
+import MessagesButton from '@/components/ui/MessagesButton';
 
 export default function Navbar() {
   const { user, profile, loading, logout } = useAuth();
@@ -45,12 +46,13 @@ export default function Navbar() {
               <span className="text-purple-300 text-sm font-orbitron">
                 Merhaba, {getUserDisplayName(user, profile)}
               </span>
+              <MessagesButton />
               <NeonButton
                 onClick={() => router.push('/dashboard')}
                 variant="secondary"
                 size="sm"
               >
-                Panel
+                Profil
               </NeonButton>
               <NeonButton
                 onClick={handleLogout}

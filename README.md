@@ -71,6 +71,34 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
 - **GitHub** for version control
 - **Environment variables** for configuration
 
+## 🧩 Hoyn QR System (Python)
+
+This repository also includes a standalone Python-based QR system in the `hoyn_qr_sistemi` directory:
+
+### Features
+- **Secure QR Generation** with encryption
+- **QR Scanning Simulation** for testing
+- **SQLite Database** for profile management
+- **Customizable QR Designs** with color options
+- **Security Module** for payload validation
+- **Comprehensive Testing Suite** with pytest
+
+### Components
+- `main.py` - Command-line interface
+- `qr_uretici.py` - QR code generation module
+- `qr_tarayici.py` - QR scanning simulation module
+- `guvenlik.py` - Security and encryption module
+- `veritabani.py` - Database management module
+- `ui_mesajlari.py` - User interface messages
+- `test_hoyn_qr_sistemi.py` - Unit tests
+
+### Running the Python System
+```bash
+cd hoyn_qr_sistemi
+pip install qrcode[pil] cryptography
+python main.py
+```
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -83,7 +111,7 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/hoyn1.git
+   git clone https://github.com/muta07/HOYN1.git
    cd hoyn1
    ```
 
@@ -93,9 +121,14 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
    ```
 
 3. **Environment Setup**
-   Create `.env.local` file:
+   Copy `.env.example` to `.env.local` and fill in your values:
+   ```bash
+   cp .env.example .env.local
+   ```
+   
+   Required environment variables:
    ```env
-   # Firebase Configuration
+   # Firebase Configuration (Required)
    NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
    NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
    NEXT_PUBLIC_FIREBASE_DATABASE_URL=your_database_url
@@ -105,8 +138,11 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
    NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
    NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=your_measurement_id
 
-   # Hugging Face API (optional)
+   # Hugging Face API (Optional - for AI QR generation)
    HUGGING_FACE_API_TOKEN=your_hf_token
+
+   # Application Settings
+   NEXT_PUBLIC_APP_URL=http://localhost:3000
    ```
 
 4. **Start development server**
@@ -117,10 +153,18 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
 5. **Open browser**
    Navigate to `http://localhost:3000`
 
-### Build for Production
+### Build Commands
 ```bash
-npm run build
-npm start
+# Development
+npm run dev          # Start development server
+
+# Production Build
+npm run build        # Build for production
+npm start           # Start production server
+
+# Code Quality
+npm run lint        # Run ESLint
+npm run type-check  # Check TypeScript types
 ```
 
 ## 📁 Project Structure
@@ -130,7 +174,7 @@ npm start
 │   ├── app/                    # Next.js App Router pages
 │   │   ├── auth/              # Authentication pages
 │   │   ├── dashboard/         # User dashboard
-│   │   ├── designer/          # T-shirt designer
+│   │   ├── designer/         # T-shirt designer
 │   │   └── scan/             # QR scanner
 │   ├── components/            # React components
 │   │   ├── qr/               # QR-related components
@@ -139,6 +183,7 @@ npm start
 │   ├── hooks/                # Custom React hooks
 │   ├── lib/                  # Utilities and configurations
 │   └── styles/               # Global styles
+├── hoyn_qr_sistemi/          # Standalone Python QR system
 ├── public/                   # Static assets
 └── configuration files
 ```

@@ -219,39 +219,60 @@ export function parseHOYNQR(data: string): QRData | null {
     
     const sanitizedData = sanitizeQRData(data);
     
-    // Check if it's a HOYN profile URL
-    const profileMatch = sanitizedData.match(/^https:\/\/hoyn\.app\/u\/([a-zA-Z0-9_-]+)$/);
-    if (profileMatch) {
-      return {
-        type: 'profile',
-        username: profileMatch[1],
-        url: sanitizedData
-      };
-    }
-    
-    // Check if it's a HOYN anonymous URL
-    const anonymousMatch = sanitizedData.match(/^https:\/\/hoyn\.app\/ask\/([a-zA-Z0-9_-]+)$/);
-    if (anonymousMatch) {
-      return {
-        type: 'anonymous',
-        username: anonymousMatch[1],
-        url: sanitizedData
-      };
-    }
-    
-    // Check if it's JSON data
+    // Check if it's JSON data (new HOYN! format with mode support)
     if (sanitizedData.startsWith('{') && sanitizedData.endsWith('}')) {
       try {
         const parsed = JSON.parse(sanitizedData);
+        
+        // Check for new HOYN! format (v1.1+)
+        if (parsed.hoyn && parsed.type && parsed.username) {
+          const result: any = {
+            type: parsed.type,
+            username: parsed.username,
+            url: parsed.url
+          };
+          
+          // Include mode information for profile QRs
+          if (parsed.mode) {
+            result.mode = parsed.mode;
+          }
+          
+          console.log('🎯 Parsed HOYN QR with mode:', result);
+          return result;
+        }
+        
+        // Legacy format support
         if (parsed.hoyn && parsed.type) {
           return {
             type: 'custom',
             data: parsed
           };
         }
-      } catch {
-        // Not valid JSON, treat as custom URL
+      } catch (jsonError) {
+        console.log('Not valid JSON, checking URL format');
       }
+    }
+    
+    // Check if it's a HOYN profile URL (support multiple domains)
+    // Updated regex to match profile URLs from any domain
+    const profileMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/u\/([a-zA-Z0-9_-]+)(\?.*)?$/);
+    if (profileMatch) {
+      return {
+        type: 'profile',
+        username: profileMatch[2],
+        url: sanitizedData
+      };
+    }
+    
+    // Check if it's a HOYN anonymous URL (support multiple domains)
+    // Updated regex to match anonymous URLs from any domain
+    const anonymousMatch = sanitizedData.match(/^(https?:\/\/[^\/]+)\/ask\/([a-zA-Z0-9_-]+)(\?.*)?$/);
+    if (anonymousMatch) {
+      return {
+        type: 'anonymous',
+        username: anonymousMatch[2],
+        url: sanitizedData
+      };
     }
     
     // Treat as custom URL
@@ -270,12 +291,16 @@ export function parseHOYNQR(data: string): QRData | null {
 }
 
 /**
- * Generates HOYN QR data
+ * Generates HOYN QR data with mode support
  */
-export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' = 'profile'): string {
-  const baseUrl = process.env.NODE_ENV === 'production' 
-    ? 'https://hoyn-1.vercel.app' 
-    : `http://localhost:${process.env.PORT || 3000}`;
+export function generateHOYNQR(
+  username: string, 
+  type: 'profile' | 'anonymous' = 'profile',
+  mode?: 'profile' | 'note' | 'song'
+): string {
+  // Use environment variable for production domain, fallback to window.location.origin for development
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
     
   const url = type === 'profile' 
     ? `${baseUrl}/u/${username}` 
@@ -287,11 +312,34 @@ export function generateHOYNQR(username: string, type: 'profile' | 'anonymous' =
     type: type,
     url: url,
     username: username,
+    mode: mode || 'profile', // Include QR mode for profile types
     createdAt: new Date().toISOString(),
-    version: '1.0'
+    version: '1.1' // Updated version to support modes
   };
   
   return JSON.stringify(hoynData);
+}
+
+/**
+ * Generates HOYN QR data with user's current mode
+ */
+export async function generateHOYNQRWithMode(username: string, userId?: string): Promise<string> {
+  let userMode: 'profile' | 'note' | 'song' = 'profile';
+  
+  // If userId is provided, fetch their current QR mode
+  if (userId) {
+    try {
+      const { getUserQRMode } = await import('./qr-modes');
+      const qrModeData = await getUserQRMode(userId);
+      if (qrModeData) {
+        userMode = qrModeData.mode;
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user QR mode, using default profile mode:', error);
+    }
+  }
+  
+  return generateHOYNQR(username, 'profile', userMode);
 }
 
 /**

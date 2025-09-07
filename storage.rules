@@ -1,0 +1,48 @@
+// Firebase Storage Security Rules for HOYN! Platform
+// These rules ensure that users can only access their own uploaded files
+// Deploy with: firebase deploy --only storage
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // User mockups for design studio
+    match /user-mockups/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Validate file upload constraints
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      resource == null && // Only allow new uploads, not overwrites
+                      request.resource.size < 10 * 1024 * 1024 && // Max 10MB
+                      request.resource.contentType.matches('image/.*'); // Only images
+    }
+    
+    // User exported designs
+    match /user-exports/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Allow larger exports (up to 20MB for high-res designs)
+      allow write: if request.auth != null && 
+                      request.auth.uid == userId &&
+                      request.resource.size < 20 * 1024 * 1024 &&
+                      request.resource.contentType.matches('image/.*');
+    }
+    
+    // Generic user uploads (legacy)
+    match /uploads/{userId}/{fileName} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Public files (read-only for all authenticated users)
+    match /public/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if false; // Only admins can write (via Cloud Functions)
+    }
+    
+    // Default deny rule
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

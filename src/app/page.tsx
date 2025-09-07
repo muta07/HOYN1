@@ -64,27 +64,7 @@ export default function Home() {
                 Giriş Yap
               </NeonButton>
             </div>
-            
-            {/* QR Scanner CTA */}
-            <div className="flex justify-center mb-8">
-              <NeonButton
-                onClick={() => {
-                  // Check if user is logged in
-                  if (user) {
-                    router.push('/scan');
-                  } else {
-                    // Redirect to login with return URL
-                    router.push('/auth/login?returnUrl=/scan');
-                  }
-                }}
-                variant="secondary"
-                size="lg"
-                glow
-                className="bg-gradient-to-r from-purple-600/30 to-pink-600/30 border-purple-500/70 min-w-[250px]"
-              >
-                📱 QR Tarayıcıyı Aç
-              </NeonButton>
-            </div>
+
           </AnimatedCard>
         </div>
       </AnimatedCard>

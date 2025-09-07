@@ -197,7 +197,7 @@ export default function QRTestValidation() {
         <div 
           id="test-qr-container" 
           ref={downloadRef}
-          className="glass-effect p-6 rounded-xl cyber-border"
+          className="p-6 bg-white rounded-xl"
         >
           {qr.isReady ? (
             <QRCodeWrapper 
@@ -216,7 +216,7 @@ export default function QRTestValidation() {
             />
           ) : (
             <div 
-              className="flex items-center justify-center bg-gray-900 rounded-lg border-2 border-dashed border-purple-500/30"
+              className="flex items-center justify-center bg-gray-100 rounded"
               style={{ width: 256, height: 256 }}
             >
               <div className="text-center">
