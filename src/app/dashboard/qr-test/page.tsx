@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { 
-  QRScannerWrapper 
-} from '@/components/qr/QRScannerWrapper';
+import QRScannerWrapper from '@/components/qr/QRScannerWrapper';
 import ClientQRGenerator from '@/components/qr/ClientQRGenerator';
 import { 
   generateQRPayload,
@@ -120,13 +118,6 @@ export default function QRTestPage() {
             console.error('Scanner error:', err);
             setScanning(false);
             setError('QR tarayıcı hatası: ' + err);
-          }}
-          constraints={{
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
           }}
         />
       </div>

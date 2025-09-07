@@ -1,7 +1,7 @@
 // Base Profile Interface
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore, doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 
@@ -249,6 +249,23 @@ export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> 
   } catch (error) {
     console.error('Failed to get user profiles:', error);
     return [];
+  }
+}
+
+export async function trackQRScan(scannerUid: string, targetUsername: string, qrType: string): Promise<void> {
+  try {
+    const scanData = {
+      scannerUid,
+      targetUsername,
+      qrType,
+      timestamp: new Date(),
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'server',
+    };
+    
+    await addDoc(collection(db, 'qrScans'), scanData);
+    console.log('QR scan tracked:', scanData);
+  } catch (error) {
+    console.error('Failed to track QR scan:', error);
   }
 }
 

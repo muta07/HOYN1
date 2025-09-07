@@ -2,10 +2,10 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { UserProfile, BusinessProfile } from '@/lib/firebase';
+import { UserProfile, BusinessProfile, HOYNProfile } from '@/lib/firebase';
 
 // Update the type to accept both profile types
-type ProfileType = UserProfile | BusinessProfile;
+type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
 
 export interface ProfileCustomization {
   theme: 'cyberpunk' | 'neon' | 'minimal' | 'dark' | 'colorful' | 'retro';

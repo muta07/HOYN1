@@ -3,17 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import QRScannerWrapper from '@/components/qr/QRScannerWrapper';
 import { 
-  QRScannerWrapper, 
-  QRScanner, 
-  QRScannerProps 
-} from '@/components/qr/QRScannerWrapper';
-import { 
-  parseHOYNQR, 
   trackQRScan,
   decryptHOYNQR,
   isHOYNQR
 } from '@/lib/firebase';
+import { parseHOYNQR } from '@/lib/qr-utils';
 import { incrementProfileViews } from '@/lib/stats';
 import Loading from '@/components/ui/Loading';
 import NeonButton from '@/components/ui/NeonButton';
@@ -31,7 +27,7 @@ export default function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleScan: QRScannerProps['onScan'] = (data: string) => {
+  const handleScan = (data: string) => {
     setScannedData(data);
     setScanning(false);
     
@@ -106,13 +102,6 @@ export default function ScanPage() {
             console.error('Scanner error:', err);
             setScanning(false);
             setError('QR tarayıcı hatası: ' + err);
-          }}
-          constraints={{
-            video: {
-              facingMode: 'environment',
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
           }}
         />
       </div>

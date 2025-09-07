@@ -883,7 +883,7 @@ export default function UserProfilePage({ params }: PageProps) {
               <div className="mb-10">
                 <ProfileStats 
                   userId={userProfile.uid || (hoynProfile?.ownerUid || '')} 
-                  isOwnProfile={isOwner} 
+                  isOwnProfile={!!isOwner} 
                 />
               </div>
 
