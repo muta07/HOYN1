@@ -1,4 +1,5 @@
 # GitHub Deployment Script for Hoyn QR System
+# Fixed version with proper PowerShell string handling
 
 Write-Host "🚀 Hoyn QR System GitHub Deployment Script"
 Write-Host "=========================================="

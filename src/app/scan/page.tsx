@@ -27,38 +27,70 @@ export default function ScanPage() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleScan = (data: string) => {
+  const handleScan = async (data: string) => {
     setScannedData(data);
     setScanning(false);
     
-    // Check if it's a HOYN QR
-    const isHOYN = isHOYNQR(data);
-    setIsHOYNQRCode(isHOYN);
-    
-    if (isHOYN) {
-      // Decrypt HOYN QR
-      const decrypted = decryptHOYNQR(data);
-      if (decrypted) {
-        try {
-          const parsed = JSON.parse(decrypted);
-          setDecryptedData(parsed);
-          
-          // Track scan
-          trackQRScan(currentUser?.uid || '', parsed.username || '', 'HOYN').catch(console.error);
-          
-          // Navigate to profile
-          if (parsed.username) {
-            router.push(`/u/${parsed.username}`);
-          }
-        } catch (err) {
-          console.error('Failed to parse HOYN QR:', err);
-          setError('Şifreli QR kodu okunamadı');
+    try {
+      // Send to backend API for validation and decryption
+      const response = await fetch('/api/scan-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qrData: data })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success && result.isHOYN) {
+        // Successful HOYN QR - redirect to profile
+        trackQRScan(currentUser?.uid || '', result.username || '', 'HOYN').catch(console.error);
+        
+        if (result.username) {
+          router.push(`/u/${result.username}`);
+          return;
         }
+        
+        // If no username but has data, show profile info
+        setDecryptedData(result.data);
+        setIsHOYNQRCode(true);
+        return;
+      } else if (result.type === 'third_party_warning') {
+        // Third-party scanner warning
+        setError(result.message);
+        setShowWarning(true);
+        return;
+      } else if (result.type === 'non_hoyn' || result.type === 'invalid') {
+        // Non-HOYN QR or validation error
+        setError(result.message || 'QR kodu geçersiz');
+        setShowWarning(true);
+        trackQRScan(currentUser?.uid || '', 'unknown', 'NON-HOYN').catch(console.error);
+        return;
+      } else {
+        // API error
+        setError(result.error || 'QR tarama hatası');
+        setShowWarning(true);
       }
-    } else {
-      // Non-HOYN QR - show warning
+    } catch (error) {
+      console.error('API error during QR scan:', error);
+      setError('Sunucu bağlantı hatası: ' + (error as Error).message);
       setShowWarning(true);
-      trackQRScan(currentUser?.uid || '', 'unknown', 'NON-HOYN').catch(console.error);
+      // Fallback to local validation for basic URLs
+      try {
+        const url = new URL(data);
+        if (url) {
+          // Check if it's a HOYN profile URL format
+          const profileMatch = data.match(/\/u\/([a-zA-Z0-9_-]+)/);
+          if (profileMatch) {
+            router.push(`/u/${profileMatch[1]}`);
+            return;
+          }
+        }
+        setError('Bu QR kod HOYN sistemi ile uyumsuz');
+        setShowWarning(true);
+      } catch {
+        setError('QR kodu işlenemedi');
+        setShowWarning(true);
+      }
     }
   };
 
@@ -114,10 +146,10 @@ export default function ScanPage() {
         <AnimatedCard className="text-center max-w-md">
           <div className="text-6xl mb-4">⚠️</div>
           <h1 className="text-2xl font-bold text-yellow-400 mb-4">
-            Bu bir HOYN QR kodu değil
+            QR Doğrulama Sonucu
           </h1>
           <p className="text-gray-300 mb-6">
-            Bu QR kodu HOYN sistemi tarafından oluşturulmamış. Yine de açmak istiyor musunuz?
+            {error || 'Bu QR kodu HOYN sistemi ile uyumsuz. Yine de açmak istiyor musunuz?'}
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <NeonButton
@@ -137,6 +169,12 @@ export default function ScanPage() {
               Hayır, İptal
             </NeonButton>
           </div>
+          {scannedData && (
+            <div className="mt-4 p-3 bg-gray-900 rounded text-xs text-gray-400">
+              <p><strong>Ham Veri:</strong></p>
+              <p className="font-mono text-xs break-all">{scannedData.substring(0, 100)}...</p>
+            </div>
+          )}
         </AnimatedCard>
       </div>
     );
