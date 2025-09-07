@@ -722,7 +722,6 @@ export default function UserProfilePage({ params }: PageProps) {
           </ThemedCard>
         </div>
       </div>
-      </ThemedProfileWrapper>
-    );
-  }
+    </ThemedProfileWrapper>
+  );
 }
