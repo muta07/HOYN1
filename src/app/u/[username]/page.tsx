@@ -588,13 +588,19 @@ export default function UserProfilePage({ params }: PageProps) {
             </div>
 
             {/* Social Links & Contact */}
-            {(userProfile.instagram || userProfile.twitter || 
-              (isBusinessProfile && (businessProfile?.socialMedia?.instagram || 
-               businessProfile?.socialMedia?.facebook || businessProfile?.socialMedia?.linkedin || 
-               businessProfile?.phone || businessProfile?.website))) && (
+            {(
+              ('instagram' in userProfile && (userProfile.instagram || userProfile.twitter)) || 
+              (isBusinessProfile && (
+                businessProfile?.socialMedia?.instagram || 
+                businessProfile?.socialMedia?.facebook || 
+                businessProfile?.socialMedia?.linkedin || 
+                businessProfile?.phone || 
+                businessProfile?.website
+              ))
+            ) && (
               <div className="mb-10">
                 {/* Personal Social Media */}
-                {('instagram' in userProfile || 'twitter' in userProfile) && (
+                {'instagram' in userProfile && (userProfile.instagram || userProfile.twitter) && (
                   <div className="flex justify-center gap-4 mb-4">
                     {userProfile.instagram && (
                       <ThemedButton
