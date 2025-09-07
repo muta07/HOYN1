@@ -36,7 +36,6 @@ export interface HOYNProfile extends BaseProfile {
 
 export type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
 
-// User Profile Interface
 export interface UserProfile extends BaseProfile {
   displayName: string; // Gerçek ad
   bio?: string;
@@ -47,6 +46,12 @@ export interface UserProfile extends BaseProfile {
   
   // Settings
   allowAnonymous?: boolean;
+  
+  // QR Code fields
+  qrGenerated?: boolean;
+  qrMode?: 'profile' | 'note' | 'song';
+  qrBase64?: string;
+  qrGeneratedAt?: string;
   
   // Phase 5.2 - Profile customization
   profileCustomization?: {

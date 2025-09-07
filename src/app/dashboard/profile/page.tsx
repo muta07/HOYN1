@@ -4,7 +4,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { getUserDisplayName, getUserUsername, updateUserNickname, updateBusinessNickname } from '@/lib/qr-utils';
+import { getUserDisplayName, getUserUsername, updateUserProfile, updateBusinessProfile } from '@/lib/qr-utils';
 import { getUserQRMode, updateUserQRMode, QRMode, formatQRModeDisplay, validateNoteContent, validateSongContent, NoteContent, SongContent } from '@/lib/qr-modes';
 import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
@@ -21,6 +21,8 @@ export default function ProfilePage() {
   const [twitter, setTwitter] = useState('');
   const [allowAnonymous, setAllowAnonymous] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [qrGenerated, setQrGenerated] = useState(false);
+  const [qrBase64, setQrBase64] = useState('');
   
   // QR Mode states
   const [qrMode, setQrMode] = useState<QRMode>('profile');
@@ -96,6 +98,27 @@ export default function ProfilePage() {
     loadQRMode();
   }, [user]);
 
+  // Load existing QR if generated
+  useEffect(() => {
+    if (user) {
+      const checkQRStatus = async () => {
+        try {
+          const response = await fetch(`/api/generate-profile-qr?userId=${user.uid}`);
+          const data = await response.json();
+          if (data.qrGenerated) {
+            setQrGenerated(true);
+            setQrBase64(data.qrBase64);
+            setQrMode(data.qrMode);
+          }
+        } catch (error) {
+          console.error('Error checking QR status:', error);
+        }
+      };
+
+      checkQRStatus();
+    }
+  }, [user]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -111,18 +134,16 @@ export default function ProfilePage() {
     
     setLoading(true);
     try {
-      // Save nickname if changed
-      if (nickname.trim() !== profile?.nickname) {
-        if (profile && 'companyName' in profile) {
-          // Business profile
-          await updateBusinessNickname(user.uid, nickname.trim() || displayName);
-        } else {
-          // Personal profile
-          await updateUserNickname(user.uid, nickname.trim() || displayName);
-        }
-      }
+      // Prepare updates
+      const updates: any = {
+        nickname: nickname.trim() || displayName,
+        bio: bio.trim(),
+        instagram: instagram.trim(),
+        twitter: twitter.trim(),
+        allowAnonymous,
+      };
       
-      // Save QR mode configuration
+      // Add QR mode configuration
       let qrModeContent = '';
       
       if (qrMode === 'note') {
@@ -141,6 +162,19 @@ export default function ProfilePage() {
         qrModeContent = JSON.stringify(songContent);
       }
       
+      updates.qrMode = qrMode;
+      updates.qrModeContent = qrModeContent;
+      
+      // Update profile based on type
+      if (profile && 'companyName' in profile) {
+        // Business profile
+        await updateBusinessProfile(user.uid, updates);
+      } else {
+        // Personal profile
+        await updateUserProfile(user.uid, updates);
+      }
+      
+      // Update QR mode
       const qrModeUpdated = await updateUserQRMode(user.uid, qrMode, qrModeContent);
       if (!qrModeUpdated) {
         alert('QR modu kaydedilemedi!');
@@ -152,6 +186,7 @@ export default function ProfilePage() {
       // Reload page to refresh profile
       window.location.reload();
     } catch (error) {
+      console.error('Save error:', error);
       alert('Profil kaydedilemedi: ' + (error as Error).message);
     } finally {
       setLoading(false);

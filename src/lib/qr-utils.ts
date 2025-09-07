@@ -146,33 +146,33 @@ export async function getBusinessProfile(uid: string): Promise<BusinessProfile |
 }
 
 /**
- * Updates business profile nickname
+ * Updates business profile
  */
-export async function updateBusinessNickname(uid: string, nickname: string): Promise<void> {
+export async function updateBusinessProfile(uid: string, updates: Partial<BusinessProfile>): Promise<void> {
   try {
     const docRef = doc(db, 'businesses', uid);
     await updateDoc(docRef, {
-      nickname: nickname.trim(),
+      ...updates,
       updatedAt: new Date()
     });
   } catch (error) {
-    console.error('Error updating business nickname:', error);
+    console.error('Error updating business profile:', error);
     throw error;
   }
 }
 
 /**
- * Updates user profile nickname
+ * Updates user profile
  */
-export async function updateUserNickname(uid: string, nickname: string): Promise<void> {
+export async function updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
   try {
     const docRef = doc(db, 'users', uid);
     await updateDoc(docRef, {
-      nickname: nickname.trim(),
+      ...updates,
       updatedAt: new Date()
     });
   } catch (error) {
-    console.error('Error updating user nickname:', error);
+    console.error('Error updating user profile:', error);
     throw error;
   }
 }
