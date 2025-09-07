@@ -1,396 +1,230 @@
-// src/app/scan/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { parseHOYNQR, trackQRScan } from '@/lib/qr-utils';
-import NeonButton from '@/components/ui/NeonButton';
+import { 
+  QRScannerWrapper, 
+  QRScanner, 
+  QRScannerProps 
+} from '@/components/qr/QRScannerWrapper';
+import { 
+  parseHOYNQR, 
+  trackQRScan,
+  decryptHOYNQR,
+  isHOYNQR
+} from '@/lib/firebase';
+import { incrementProfileViews } from '@/lib/stats';
 import Loading from '@/components/ui/Loading';
+import NeonButton from '@/components/ui/NeonButton';
 import AnimatedCard from '@/components/ui/AnimatedCard';
-import dynamic from 'next/dynamic';
-
-// Dynamic import with SSR disabled
-const QRScannerWrapper = dynamic(
-  () => import('@/components/qr/QRScannerWrapper'),
-  { 
-    ssr: false,
-    loading: () => (
-      <div className="w-full h-64 glass-effect flex items-center justify-center cyber-border">
-        <Loading size="lg" text="QR Tarayıcı yükleniyor..." />
-      </div>
-    )
-  }
-);
+import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
 
 export default function ScanPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user: currentUser } = useAuth();
   const router = useRouter();
   
-  const [scannedData, setScannedData] = useState('');
-  const [isHoynQR, setIsHoynQR] = useState(false);
-  const [qrData, setQrData] = useState<any>(null);
-  const [error, setError] = useState('');
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [scannedData, setScannedData] = useState<string | null>(null);
+  const [isHOYNQRCode, setIsHOYNQRCode] = useState<boolean | null>(null);
+  const [decryptedData, setDecryptedData] = useState<any>(null);
+  const [showWarning, setShowWarning] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Auth check
-  useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login');
-    }
-  }, [user, authLoading, router]);
-
-  // Handle scan results with improved parsing
-  const handleScan = (result: string) => {
-    if (!result) return;
+  const handleScan: QRScannerProps['onScan'] = (data: string) => {
+    setScannedData(data);
+    setScanning(false);
     
-    console.log('QR Scanned:', result);
-    setScannedData(result);
-    setError('');
+    // Check if it's a HOYN QR
+    const isHOYN = isHOYNQR(data);
+    setIsHOYNQRCode(isHOYN);
     
-    // First, try to parse as HOYN! QR
-    const parsedData = parseHOYNQR(result);
-    
-    if (parsedData) {
-      // HOYN! QR found!
-      setIsHoynQR(true);
-      setQrData(parsedData);
-      
-      // Analytics tracking
-      trackQRScan(parsedData, { scannedBy: user?.uid });
-      
-      // Auto redirect
-      checkAndRedirect(parsedData);
-    } else {
-      // Try to parse as a URL or username
-      try {
-        // Check if it's a full URL
-        if (result.startsWith('http://') || result.startsWith('https://')) {
-          const url = new URL(result);
-          
-          // Check if it's our own domain
-          if (url.origin === window.location.origin) {
-            // It's our domain, redirect directly
-            setIsRedirecting(true);
-            setTimeout(() => {
-              window.location.href = result;
-            }, 1000);
-            return;
-          } else {
-            // External URL - open in new tab
-            window.open(result, '_blank');
-            return;
-          }
-        }
-        
-        // Check if it's a username (starts with @)
-        if (result.startsWith('@')) {
-          const username = result.substring(1);
-          setIsRedirecting(true);
-          setTimeout(() => {
-            router.push(`/u/${username}`);
-          }, 1000);
-          return;
-        }
-        
-        // Check if it's a plain username
-        if (result.length > 0 && !result.includes(' ')) {
-          setIsRedirecting(true);
-          setTimeout(() => {
-            router.push(`/u/${result}`);
-          }, 1000);
-          return;
-        }
-      } catch (urlError) {
-        console.log('Not a valid URL or username format');
-      }
-      
-      // Not a HOYN! QR or recognizable format
-      setIsHoynQR(false);
-      setQrData(null);
-      // Show warning after 1 second
-      setTimeout(() => {
-        if (!isHoynQR) {
-          setError('Bu bir HOYN! QR kodu değil. Sadece HOYN! QR kodları desteklenir.');
-        }
-      }, 1000);
-    }
-  };
-
-  // Check if HOYN! QR and redirect with improved logic
-  const checkAndRedirect = async (qrData: any) => {
-    if (!qrData) return;
-    
-    setIsRedirecting(true);
-    
-    // Wait 2 seconds, then redirect
-    setTimeout(() => {
-      if (qrData.type === 'profile' && qrData.username) {
-        router.push(`/u/${qrData.username}`);
-      } else if (qrData.type === 'anonymous' && qrData.username) {
-        router.push(`/ask/${qrData.username}`);
-      } else if (qrData.type === 'custom' && qrData.url) {
-        window.open(qrData.url, '_blank');
-        setIsRedirecting(false);
-      } else if (qrData.url) {
-        // Validate URL before opening
+    if (isHOYN) {
+      // Decrypt HOYN QR
+      const decrypted = decryptHOYNQR(data);
+      if (decrypted) {
         try {
-          const url = new URL(qrData.url);
-          if (url.origin === window.location.origin) {
-            // Internal URL
-            window.location.href = qrData.url;
-          } else {
-            // External URL
-            window.open(qrData.url, '_blank');
+          const parsed = JSON.parse(decrypted);
+          setDecryptedData(parsed);
+          
+          // Track scan
+          trackQRScan(currentUser?.uid || '', parsed.username || '', 'HOYN').catch(console.error);
+          
+          // Navigate to profile
+          if (parsed.username) {
+            router.push(`/u/${parsed.username}`);
           }
-        } catch (urlError) {
-          console.error('Invalid URL:', qrData.url);
-          window.open(qrData.url, '_blank');
+        } catch (err) {
+          console.error('Failed to parse HOYN QR:', err);
+          setError('Şifreli QR kodu okunamadı');
         }
-        setIsRedirecting(false);
-      } else {
-        setIsRedirecting(false);
       }
-    }, 2000);
+    } else {
+      // Non-HOYN QR - show warning
+      setShowWarning(true);
+      trackQRScan(currentUser?.uid || '', 'unknown', 'NON-HOYN').catch(console.error);
+    }
   };
 
-  // Handle errors
-  const handleError = (err: any) => {
-    console.error('Scan error:', err);
-    setError(err?.message || 'QR tarama hatası oluştu.');
+  const handleConfirmNonHOYN = () => {
+    if (scannedData) {
+      // For non-HOYN QRs, try to navigate to the URL if it's a valid URL
+      try {
+        const url = new URL(scannedData);
+        window.open(url.href, '_blank');
+      } catch {
+        // If not a valid URL, show error
+        setError('Bu QR kod geçerli bir URL içermiyor');
+      }
+    }
+    setShowWarning(false);
   };
 
-  // Reset scanner
-  const resetScanner = () => {
-    setScannedData('');
-    setIsHoynQR(false);
-    setQrData(null);
-    setError('');
-    setIsRedirecting(false);
+  const handleCancelNonHOYN = () => {
+    setShowWarning(false);
+    setScannedData(null);
+    setIsHOYNQRCode(null);
+    setDecryptedData(null);
+    setError(null);
   };
 
-  if (authLoading) {
+  const handleStartScan = () => {
+    setScanning(true);
+    setScannedData(null);
+    setIsHOYNQRCode(null);
+    setDecryptedData(null);
+    setError(null);
+    setShowWarning(false);
+  };
+
+  if (scanning) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loading size="lg" text="Yükleniyor..." />
+      <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <QRScannerWrapper
+          onScan={handleScan}
+          onError={(err) => {
+            console.error('Scanner error:', err);
+            setScanning(false);
+            setError('QR tarayıcı hatası: ' + err);
+          }}
+          constraints={{
+            video: {
+              facingMode: 'environment',
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          }}
+        />
       </div>
     );
   }
 
-  if (!user) return null;
+  if (showWarning) {
+    return (
+      <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
+        <AnimatedCard className="text-center max-w-md">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h1 className="text-2xl font-bold text-yellow-400 mb-4">
+            Bu bir HOYN QR kodu değil
+          </h1>
+          <p className="text-gray-300 mb-6">
+            Bu QR kodu HOYN sistemi tarafından oluşturulmamış. Yine de açmak istiyor musunuz?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <NeonButton
+              onClick={handleConfirmNonHOYN}
+              variant="primary"
+              size="lg"
+              className="w-full sm:w-auto"
+            >
+              Evet, Aç
+            </NeonButton>
+            <NeonButton
+              onClick={handleCancelNonHOYN}
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto"
+            >
+              Hayır, İptal
+            </NeonButton>
+          </div>
+        </AnimatedCard>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-md mx-auto">
+      <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-2 glow-text">
-            📱 HOYN! QR Tarayıcı
+          <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-4">
+            HOYN QR Tarayıcı 🔍
           </h1>
-          <p className="text-gray-300 mb-1">HOYN! QR kodlarını tarayın</p>
-          <p className="text-sm text-purple-300">Sadece HOYN! formatındaki QR'lar desteklenir</p>
+          <p className="text-lg text-gray-300">
+            HOYN şifreli QR kodlarını tarayın ve profil sayfalarına ulaşın
+          </p>
         </div>
 
-        {/* Scanner */}
-        <AnimatedCard className="mb-6">
-          <div className="aspect-square rounded-xl overflow-hidden border-4 border-purple-900 relative">
-            <QRScannerWrapper 
-              onScan={handleScan} 
-              onError={handleError}
-            />
-          </div>
-        </AnimatedCard>
-
-        {/* Results */}
-        {error && (
-          <AnimatedCard className="mb-4">
-            <div className="bg-red-900/20 border border-red-500 text-red-300 p-4 rounded-lg text-center">
-              <div className="text-2xl mb-2">⚠️</div>
-              <p className="font-bold mb-1">HOYN! QR Değil</p>
-              <p className="text-sm">{error}</p>
-              <div className="mt-3 p-3 bg-gray-900/50 rounded border border-gray-600">
-                <p className="text-xs text-gray-400 mb-2">Taranan içerik:</p>
-                <code className="text-xs text-gray-300 break-all">{scannedData}</code>
-              </div>
-              <NeonButton 
-                onClick={resetScanner} 
-                variant="outline" 
-                size="sm" 
-                className="mt-3"
-              >
-                🔄 Tekrar Dene
-              </NeonButton>
-            </div>
-          </AnimatedCard>
-        )}
-
-        {scannedData && isHoynQR && qrData && (
-          <AnimatedCard className="mb-4">
-            <div className="glass-effect p-6 rounded-xl cyber-border text-center">
-              <div className="text-4xl mb-3">🎆</div>
-              <h3 className="text-xl font-bold text-white mb-3">HOYN! QR Bulundu!</h3>
-              
-              {/* QR Type Info */}
-              <div className="bg-purple-900/20 p-4 rounded-lg mb-4 border border-purple-500/30">
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-lg">
-                    {qrData.type === 'profile' ? '👤' : 
-                     qrData.type === 'anonymous' ? '💬' : '🔗'}
-                  </span>
-                  <h4 className="font-bold text-purple-300">
-                    {qrData.type === 'profile' ? 'Profil QR\'ı' : 
-                     qrData.type === 'anonymous' ? 'Anonim Mesaj QR\'ı' : 'Özel QR'}
-                  </h4>
-                </div>
-                
-                {qrData.username && (
-                  <div className="bg-gray-900/50 rounded-lg p-3 mb-3">
-                    <p className="text-sm text-white">
-                      Kullanıcı: <span className="font-bold text-purple-300">@{qrData.username}</span>
-                    </p>
-                    {qrData.mode && qrData.type === 'profile' && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        {qrData.mode === 'note' ? '📝 Nota tıklayınca not sayfası açılacak' :
-                         qrData.mode === 'song' ? '🎵 Şarkıya tıklayınca müzik sayfası açılacak' :
-                         '👤 Profile tıklayınca profil sayfası açılacak'}
-                      </p>
-                    )}
-                  </div>
-                )}
-                
-                <div className="bg-gray-900/50 rounded-lg p-3">
-                  <p className="text-xs text-gray-400 mb-1">QR İçeriği:</p>
-                  <code className="text-xs text-gray-300 break-all">{qrData.url || scannedData}</code>
-                </div>
-              </div>
-              
-              {isRedirecting ? (
-                <div className="text-purple-300">
-                  <div className="animate-spin inline-block w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full mb-3"></div>
-                  <p className="font-bold">Yönlendiriliyor...</p>
-                  <p className="text-sm text-gray-400">
-                    {qrData.type === 'profile' ? 'Profile sayfasına yönlendiriliyorsunuz' :
-                     qrData.type === 'anonymous' ? 'Anonim mesaj sayfasına yönlendiriliyorsunuz' :
-                     'Bağlantı açılıyor'}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <NeonButton
-                    onClick={() => {
-                      if (qrData.type === 'profile') {
-                        router.push(`/u/${qrData.username}`);
-                      } else if (qrData.type === 'anonymous') {
-                        router.push(`/ask/${qrData.username}`);
-                      } else if (qrData.url) {
-                        try {
-                          const url = new URL(qrData.url);
-                          if (url.origin === window.location.origin) {
-                            // Internal URL
-                            window.location.href = qrData.url;
-                          } else {
-                            // External URL
-                            window.open(qrData.url, '_blank');
-                          }
-                        } catch (urlError) {
-                          console.error('Invalid URL:', qrData.url);
-                          window.open(qrData.url, '_blank');
-                        }
-                      }
-                    }}
-                    variant="primary"
-                    size="md"
-                    className="w-full"
-                    glow
-                  >
-                    {qrData.type === 'profile' ? (
-                      qrData.mode === 'note' ? '📝 Notu Gör' :
-                      qrData.mode === 'song' ? '🎵 Şarkıyı Dinle' :
-                      '👤 Profile Git'
-                    ) :
-                     qrData.type === 'anonymous' ? '💬 Mesaj Gönder' :
-                     '🌐 Linki Aç'}
-                  </NeonButton>
-                  
-                  <NeonButton
-                    onClick={resetScanner}
-                    variant="outline"
-                    size="md"
-                    className="w-full"
-                  >
-                    🔄 Yeni QR Tara
-                  </NeonButton>
-                </div>
-              )}
-            </div>
-          </AnimatedCard>
-        )}
-
-        {/* Navigation */}
-        <div className="space-y-3">
+        {/* Scanner Button */}
+        <div className="text-center mb-8">
           <NeonButton
-            onClick={() => router.push('/dashboard')}
-            variant="secondary"
+            onClick={handleStartScan}
+            variant="primary"
             size="lg"
-            className="w-full"
+            glow
+            className="w-full max-w-sm"
           >
-            ← Dashboard'a Dön
+            📱 QR Kod Tarat
           </NeonButton>
-          
-          <NeonButton
-            onClick={() => router.push('/dashboard/qr-generator')}
-            variant="outline"
-            size="md"
-            className="w-full"
-          >
-            ✨ QR Oluştur
-          </NeonButton>
+          <p className="text-sm text-gray-400 mt-2">
+            Kamerayı aç ve QR kodunu tarat
+          </p>
         </div>
 
-        {/* Tips */}
-        <AnimatedCard className="mt-8">
-          <div className="text-center p-4">
-            <h4 className="text-lg font-bold text-purple-300 mb-3">💡 HOYN! QR Tarayıcı</h4>
-            <div className="space-y-3">
-              <div className="bg-purple-900/20 p-3 rounded-lg border border-purple-500/30">
-                <p className="text-sm font-bold text-purple-300 mb-1">🎆 HOYN! QR'ları</p>
-                <p className="text-xs text-gray-300 mb-2">Otomatik olarak tanınır ve ilgili sayfaya yönlendirilir</p>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <div className="bg-gray-800/50 p-2 rounded">
-                    <div className="text-center">
-                      <span className="text-lg">👤</span>
-                      <p className="text-purple-300 font-bold">Profil</p>
-                      <p className="text-gray-400">Normal profil</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-800/50 p-2 rounded">
-                    <div className="text-center">
-                      <span className="text-lg">📝</span>
-                      <p className="text-purple-300 font-bold">Not</p>
-                      <p className="text-gray-400">Özel mesaj</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-800/50 p-2 rounded">
-                    <div className="text-center">
-                      <span className="text-lg">🎵</span>
-                      <p className="text-purple-300 font-bold">Şarkı</p>
-                      <p className="text-gray-400">Müzik paylaşımı</p>
-                    </div>
-                  </div>
-                </div>
+        {/* Instructions */}
+        <div className="space-y-4 mb-8">
+          <AnimatedCard direction="up" className="p-6">
+            <h3 className="text-xl font-bold text-purple-300 mb-3">Nasıl Kullanılır?</h3>
+            <div className="space-y-2 text-sm text-gray-300">
+              <p>🔐 <strong>HOYN QR Kodları:</strong> Sadece HOYN tarayıcı ile okunabilir</p>
+              <p>🔒 <strong>Şifreli Koruma:</strong> Diğer tarayıcılar uyarı gösterir</p>
+              <p>👤 <strong>Profil Sayfası:</strong> Doğru profiline yönlendirir</p>
+              <p>📱 <strong>Mobil Uyumlu:</strong> Telefon kamerası ile çalışır</p>
+            </div>
+          </AnimatedCard>
+        </div>
+
+        {/* Security Features */}
+        <div className="space-y-4 mb-8">
+          <AnimatedCard direction="up" className="p-6 bg-purple-900/10">
+            <h3 className="text-lg font-bold text-purple-300 mb-3">Güvenlik Özellikleri</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-300">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔐</span>
+                <span>Şifreli Veri</span>
               </div>
-              <div className="bg-red-900/20 p-3 rounded-lg border border-red-500/30">
-                <p className="text-sm font-bold text-red-300 mb-1">⚠️ Diğer QR'lar</p>
-                <p className="text-xs text-gray-300">Desteklenmez ve uyarı mesajı gösterilir</p>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🛡️</span>
+                <span>HOYN Doğrulama</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">📊</span>
+                <span>Tarama İstatistikleri</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🔒</span>
+                <span>Gizli Profil Koruma</span>
               </div>
             </div>
-            <div className="mt-4 space-y-2 text-sm text-gray-400">
-              <p>📱 QR kodu düz tutun ve odaklanın</p>
-              <p>💡 Işık yetersizse flaşı açın</p>
-              <p>🎯 QR'ı çerçeve içinde ortalayın</p>
-            </div>
-          </div>
-        </AnimatedCard>
+          </AnimatedCard>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center text-gray-500 text-sm">
+          <p>HOYN QR Tarayıcı - Güvenli Profil Paylaşımı</p>
+          <p className="mt-1">© 2025 HOYN Teknoloji</p>
+        </div>
       </div>
     </div>
   );

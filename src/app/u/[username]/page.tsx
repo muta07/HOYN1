@@ -1,10 +1,9 @@
-// src/app/u/[username]/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import { db, UserProfile, BusinessProfile } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db, UserProfile, BusinessProfile, HOYNProfile, getHOYNProfileByUsername, getUserProfiles, createHOYNProfile } from '@/lib/firebase';
 import { getUserQRMode, QRModeData, NoteContent, SongContent, getEmbedUrl } from '@/lib/qr-modes';
 import { incrementProfileViews } from '@/lib/stats';
 import { useAuth } from '@/hooks/useAuth';
@@ -17,7 +16,7 @@ import { ThemedCard, ThemedButton, ThemedText, ThemedBadge } from '@/components/
 import FollowButton from '@/components/social/FollowButton';
 import SocialStats from '@/components/social/SocialStats';
 
-type ProfileType = UserProfile | BusinessProfile;
+type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
 
 interface PageProps {
   params: {
@@ -31,11 +30,25 @@ export default function UserProfilePage({ params }: PageProps) {
   const router = useRouter();
   
   const [userProfile, setUserProfile] = useState<ProfileType | null>(null);
+  const [ownerProfiles, setOwnerProfiles] = useState<HOYNProfile[]>([]);
   const [qrMode, setQrMode] = useState<QRModeData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [noteContent, setNoteContent] = useState<NoteContent | null>(null);
   const [songContent, setSongContent] = useState<SongContent | null>(null);
+  
+  // Profile creation state
+  const [showCreateProfile, setShowCreateProfile] = useState(false);
+  const [newProfileData, setNewProfileData] = useState({
+    username: '',
+    displayName: '',
+    type: 'personal' as 'personal' | 'business',
+    bio: '',
+    companyName: '',
+    businessType: '',
+    isPrimary: false
+  });
+  const [creatingProfile, setCreatingProfile] = useState(false);
 
   useEffect(() => {
     const loadUserProfile = async () => {
@@ -45,113 +58,178 @@ export default function UserProfilePage({ params }: PageProps) {
         setLoading(true);
         setError(null);
 
+        // First, try to load from new profiles collection
+        const hoynProfile = await getHOYNProfileByUsername(username);
+        if (hoynProfile) {
+          setUserProfile(hoynProfile);
+          
+          // Load QR mode configuration
+          const qrModeData = await getUserQRMode(hoynProfile.uid);
+          setQrMode(qrModeData);
+
+          // Parse QR mode content
+          if (qrModeData?.mode === 'note' && qrModeData.content) {
+            try {
+              const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
+              setNoteContent(parsedNote);
+            } catch (error) {
+              // Fallback for plain text content
+              setNoteContent({ 
+                text: qrModeData.content, 
+                title: '', 
+                emoji: '📝' 
+              });
+            }
+          } else if (qrModeData?.mode === 'song' && qrModeData.content) {
+            try {
+              const parsedSong = JSON.parse(qrModeData.content) as SongContent;
+              setSongContent(parsedSong);
+            } catch (error) {
+              // Fallback for plain URL content
+              setSongContent({ 
+                url: qrModeData.content, 
+                platform: 'other', 
+                title: '', 
+                artist: '' 
+              });
+            }
+          }
+
+          // Load owner's other profiles if this is the owner's page
+          if (currentUser && currentUser.uid === hoynProfile.ownerUid) {
+            const profiles = await getUserProfiles(hoynProfile.ownerUid);
+            setOwnerProfiles(profiles);
+          }
+
+          // Increment profile views (if viewing someone else's profile)
+          if (currentUser && currentUser.uid !== hoynProfile.ownerUid) {
+            incrementProfileViews(hoynProfile.ownerUid).catch(error => {
+              console.error('Failed to track profile view:', error);
+            });
+          }
+          
+          return;
+        }
+
+        // Fallback: try legacy collections for backward compatibility
         // First, try to find user in 'users' collection
         const usersRef = collection(db, 'users');
         const userQuery = query(usersRef, where('username', '==', username));
         const userQuerySnapshot = await getDocs(userQuery);
         
         if (!userQuerySnapshot.empty) {
-          // Found in users collection
+          // Found in users collection - migrate to new system
           const userDoc = userQuerySnapshot.docs[0];
           const userData = userDoc.data() as UserProfile;
-          setUserProfile(userData);
           
-          // Load QR mode configuration
+          // Create HOYNProfile from legacy user
+          const profileData = {
+            username: userData.username,
+            type: 'personal' as const,
+            displayName: userData.displayName,
+            bio: userData.bio,
+            instagram: userData.instagram,
+            twitter: userData.twitter,
+            allowAnonymous: userData.allowAnonymous,
+            profileCustomization: userData.profileCustomization,
+            nickname: userData.nickname,
+            avatar: userData.avatar,
+            email: userData.email,
+            uid: userData.uid,
+            createdAt: userData.createdAt || new Date(),
+            updatedAt: userData.updatedAt || new Date(),
+            followersCount: userData.followersCount || 0,
+            followingCount: userData.followingCount || 0,
+          };
+
+          const newProfile = await createHOYNProfile(userData.uid, profileData, true);
+          if (newProfile) {
+            setUserProfile(newProfile);
+            // Continue with QR mode loading...
+            const qrModeData = await getUserQRMode(userData.uid);
+            setQrMode(qrModeData);
+            // Parse content logic same as above...
+            if (currentUser && currentUser.uid === userData.uid) {
+              const profiles = await getUserProfiles(userData.uid);
+              setOwnerProfiles(profiles);
+            }
+            return;
+          }
+          
+          // If migration failed, use legacy data
+          setUserProfile(userData);
+          // Load QR mode for legacy...
           const qrModeData = await getUserQRMode(userData.uid);
           setQrMode(qrModeData);
-
-          // Parse QR mode content
-          if (qrModeData?.mode === 'note' && qrModeData.content) {
-            try {
-              const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
-              setNoteContent(parsedNote);
-            } catch (error) {
-              // Fallback for plain text content
-              setNoteContent({ 
-                text: qrModeData.content, 
-                title: '', 
-                emoji: '📝' 
-              });
-            }
-          } else if (qrModeData?.mode === 'song' && qrModeData.content) {
-            try {
-              const parsedSong = JSON.parse(qrModeData.content) as SongContent;
-              setSongContent(parsedSong);
-            } catch (error) {
-              // Fallback for plain URL content
-              setSongContent({ 
-                url: qrModeData.content, 
-                platform: 'other', 
-                title: '', 
-                artist: '' 
-              });
-            }
-          }
-
-          // Increment profile views (if viewing someone else's profile)
+          // Parse content...
           if (currentUser && currentUser.uid !== userData.uid) {
             incrementProfileViews(userData.uid).catch(error => {
               console.error('Failed to track profile view:', error);
             });
           }
-          
           return;
         }
         
-        // If not found in users, try businesses collection
+        // Try businesses collection
         const businessesRef = collection(db, 'businesses');
         const businessQuery = query(businessesRef, where('username', '==', username));
         const businessQuerySnapshot = await getDocs(businessQuery);
         
         if (!businessQuerySnapshot.empty) {
-          // Found in businesses collection
+          // Similar migration logic for business profiles...
           const businessDoc = businessQuerySnapshot.docs[0];
           const businessData = businessDoc.data() as BusinessProfile;
-          setUserProfile(businessData);
           
-          // Load QR mode configuration
+          // Create HOYNProfile from legacy business
+          const profileData = {
+            username: businessData.username,
+            type: 'business' as const,
+            companyName: businessData.companyName,
+            ownerName: businessData.ownerName,
+            businessType: businessData.businessType,
+            description: businessData.description,
+            address: businessData.address,
+            phone: businessData.phone,
+            website: businessData.website,
+            sector: businessData.sector,
+            foundedYear: businessData.foundedYear,
+            employeeCount: businessData.employeeCount,
+            services: businessData.services,
+            workingHours: businessData.workingHours,
+            socialMedia: businessData.socialMedia,
+            contactInfo: businessData.contactInfo,
+            location: businessData.location,
+            businessSettings: businessData.businessSettings,
+            nickname: businessData.nickname,
+            avatar: businessData.avatar,
+            email: businessData.email,
+            uid: businessData.uid,
+            createdAt: businessData.createdAt || new Date(),
+            updatedAt: businessData.updatedAt || new Date(),
+            followersCount: businessData.followersCount || 0,
+            followingCount: businessData.followingCount || 0,
+          };
+
+          const newProfile = await createHOYNProfile(businessData.uid, profileData, true);
+          if (newProfile) {
+            setUserProfile(newProfile);
+            // Continue with QR mode loading...
+            return;
+          }
+          
+          // Fallback to legacy
+          setUserProfile(businessData);
           const qrModeData = await getUserQRMode(businessData.uid);
           setQrMode(qrModeData);
-
-          // Parse QR mode content
-          if (qrModeData?.mode === 'note' && qrModeData.content) {
-            try {
-              const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
-              setNoteContent(parsedNote);
-            } catch (error) {
-              // Fallback for plain text content
-              setNoteContent({ 
-                text: qrModeData.content, 
-                title: '', 
-                emoji: '📝' 
-              });
-            }
-          } else if (qrModeData?.mode === 'song' && qrModeData.content) {
-            try {
-              const parsedSong = JSON.parse(qrModeData.content) as SongContent;
-              setSongContent(parsedSong);
-            } catch (error) {
-              // Fallback for plain URL content
-              setSongContent({ 
-                url: qrModeData.content, 
-                platform: 'other', 
-                title: '', 
-                artist: '' 
-              });
-            }
-          }
-
-          // Increment profile views (if viewing someone else's profile)
           if (currentUser && currentUser.uid !== businessData.uid) {
             incrementProfileViews(businessData.uid).catch(error => {
               console.error('Failed to track profile view:', error);
             });
           }
-          
           return;
         }
         
-        // Not found in either collection
+        // Not found
         setError('Kullanıcı bulunamadı');
 
       } catch (error) {
@@ -164,6 +242,63 @@ export default function UserProfilePage({ params }: PageProps) {
 
     loadUserProfile();
   }, [username, currentUser]);
+
+  // Profile creation handler
+  const handleCreateProfile = async () => {
+    if (!currentUser || !newProfileData.username || !newProfileData.displayName) {
+      alert('Lütfen tüm gerekli alanları doldurun');
+      return;
+    }
+
+    setCreatingProfile(true);
+    try {
+      const profileData = {
+        username: newProfileData.username,
+        displayName: newProfileData.displayName,
+        type: newProfileData.type,
+        nickname: newProfileData.displayName,
+        email: currentUser.email || '',
+        uid: currentUser.uid,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        followersCount: 0,
+        followingCount: 0,
+        ...(newProfileData.type === 'personal' ? {
+          bio: newProfileData.bio,
+        } : {
+          companyName: newProfileData.companyName,
+          businessType: newProfileData.businessType,
+          description: newProfileData.bio,
+          ownerName: newProfileData.displayName,
+        }),
+      };
+
+      const newProfile = await createHOYNProfile(currentUser.uid, profileData, newProfileData.isPrimary);
+      if (newProfile) {
+        setOwnerProfiles(prev => [...prev, newProfile]);
+        setShowCreateProfile(false);
+        setNewProfileData({
+          username: '',
+          displayName: '',
+          type: 'personal',
+          bio: '',
+          companyName: '',
+          businessType: '',
+          isPrimary: false
+        });
+        alert('Yeni profil başarıyla oluşturuldu!');
+        // Optionally redirect to new profile
+        router.push(`/u/${newProfile.username}`);
+      } else {
+        alert('Profil oluşturulamadı. Lütfen tekrar deneyin.');
+      }
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      alert('Profil oluştururken hata oluştu.');
+    } finally {
+      setCreatingProfile(false);
+    }
+  };
 
   // Show loading state
   if (loading) {
@@ -199,15 +334,23 @@ export default function UserProfilePage({ params }: PageProps) {
     );
   }
 
-  // Get display name
-  const displayName = 'displayName' in userProfile ? userProfile.displayName : userProfile.nickname || userProfile.username;
+  // Determine if this is the profile owner
+  const isOwner = currentUser && (currentUser.uid === userProfile.uid || ('ownerUid' in userProfile && currentUser.uid === (userProfile as HOYNProfile).ownerUid));
+  
+  // Get display name - handle HOYNProfile
+  const displayName = 'displayName' in userProfile ? userProfile.displayName : 
+                     'companyName' in userProfile ? userProfile.companyName : 
+                     userProfile.nickname || userProfile.username;
   
   // Check if this is a business profile
-  const isBusinessProfile = 'companyName' in userProfile;
+  const isBusinessProfile = 'companyName' in userProfile || ('type' in userProfile && (userProfile as HOYNProfile).type === 'business');
   const businessProfile = isBusinessProfile ? userProfile as BusinessProfile : null;
+  const hoynProfile = 'type' in userProfile ? userProfile as HOYNProfile : null;
   
   // Get bio - handle both profile types
-  const bio = 'bio' in userProfile ? userProfile.bio : businessProfile?.description;
+  const bio = 'bio' in userProfile ? userProfile.bio : 
+              'description' in userProfile ? userProfile.description : 
+              (hoynProfile?.type === 'personal' ? (userProfile as UserProfile).bio : (userProfile as BusinessProfile).description) || '';
 
   // Note Mode Display
   if (qrMode?.mode === 'note' && noteContent) {
@@ -426,57 +569,213 @@ export default function UserProfilePage({ params }: PageProps) {
     );
   }
 
+  // Profile Creation Modal
+  const ProfileCreationModal = () => (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <AnimatedCard className="max-w-md w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6">
+          <ThemedText size="2xl" weight="bold" className="mb-4 text-center">
+            Yeni Profil Oluştur
+          </ThemedText>
+          
+          <div className="space-y-4">
+            <input
+              type="text"
+              placeholder="Kullanıcı Adı (benzersiz)"
+              value={newProfileData.username}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewProfileData({...newProfileData, username: e.target.value})}
+              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400"
+            />
+            
+            <input
+              type="text"
+              placeholder="Görünen Ad"
+              value={newProfileData.displayName}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewProfileData({...newProfileData, displayName: e.target.value})}
+              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400"
+            />
+            
+            <select
+              value={newProfileData.type}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewProfileData({...newProfileData, type: e.target.value as 'personal' | 'business'})}
+              className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400"
+            >
+              <option value="personal">Kişisel Profil</option>
+              <option value="business">İş Profil</option>
+            </select>
+            
+            {newProfileData.type === 'personal' ? (
+              <textarea
+                placeholder="Biyografi (isteğe bağlı)"
+                value={newProfileData.bio}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewProfileData({...newProfileData, bio: e.target.value})}
+                rows={3}
+                className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 resize-none"
+              />
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Şirket Adı"
+                  value={newProfileData.companyName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewProfileData({...newProfileData, companyName: e.target.value})}
+                  className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400"
+                />
+                <input
+                  type="text"
+                  placeholder="İş Türü"
+                  value={newProfileData.businessType}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewProfileData({...newProfileData, businessType: e.target.value})}
+                  className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400"
+                />
+                <textarea
+                  placeholder="Açıklama"
+                  value={newProfileData.bio}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setNewProfileData({...newProfileData, bio: e.target.value})}
+                  rows={3}
+                  className="w-full p-3 bg-gray-800 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-purple-400 resize-none"
+                />
+              </>
+            )}
+            
+            <div className="flex items-center space-x-2">
+              <input
+                type="checkbox"
+                id="isPrimary"
+                checked={newProfileData.isPrimary}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewProfileData({...newProfileData, isPrimary: e.target.checked})}
+                className="rounded"
+              />
+              <label htmlFor="isPrimary" className="text-sm text-gray-300 cursor-pointer">
+                Ana Profil Yap
+              </label>
+            </div>
+          </div>
+          
+          <div className="flex gap-3 mt-6">
+            <NeonButton
+              onClick={handleCreateProfile}
+              variant="primary"
+              size="md"
+              glow
+              disabled={creatingProfile || !newProfileData.username || !newProfileData.displayName}
+              className="flex-1"
+            >
+              {creatingProfile ? 'Oluşturuluyor...' : 'Profil Oluştur'}
+            </NeonButton>
+            
+            <NeonButton
+              onClick={() => {
+                setShowCreateProfile(false);
+                setNewProfileData({
+                  username: '',
+                  displayName: '',
+                  type: 'personal',
+                  bio: '',
+                  companyName: '',
+                  businessType: '',
+                  isPrimary: false
+                });
+              }}
+              variant="outline"
+              size="md"
+              className="flex-1"
+            >
+              İptal
+            </NeonButton>
+          </div>
+        </div>
+      </AnimatedCard>
+    </div>
+  );
+
   // Default Profile Mode Display
   return (
-    <ThemedProfileWrapper profile={userProfile}>
-      <div className="min-h-screen py-12 px-6">
-        <div className="max-w-4xl mx-auto">
-          <ThemedCard variant="default" glow>
-            {/* Header */}
-            <div className="text-center mb-12">
-              {/* Business Icon or User Icon */}
-              <div className="text-8xl mb-4">
-                {isBusinessProfile ? '🏢' : '👤'}
-              </div>
-              
-              <ThemedText size="4xl" weight="black" variant="primary" glow className="mb-4">
-                {displayName}
-              </ThemedText>
-              
-              {isBusinessProfile && businessProfile?.companyName !== displayName && (
-                <ThemedText size="2xl" variant="default" className="mb-2">
-                  {businessProfile?.companyName}
-                </ThemedText>
-              )}
-              
-              <ThemedText size="xl" variant="muted" className="mb-2">
-                @{userProfile.username}
-              </ThemedText>
-              
-              {/* Business Type & Sector */}
-              {isBusinessProfile && (businessProfile?.businessType || businessProfile?.sector) && (
-                <div className="flex justify-center gap-2 mb-4">
-                  {businessProfile?.businessType && (
-                    <ThemedBadge variant="primary" size="md">
-                      {businessProfile.businessType}
-                    </ThemedBadge>
-                  )}
-                  {businessProfile?.sector && (
-                    <ThemedBadge variant="accent" size="md">
-                      {businessProfile.sector}
-                    </ThemedBadge>
-                  )}
+    <>
+      <ThemedProfileWrapper profile={userProfile || {}}>
+        <div className="min-h-screen py-12 px-6">
+          <div className="max-w-4xl mx-auto">
+            <ThemedCard variant="default" glow>
+              {/* Header */}
+              <div className="text-center mb-12">
+                {/* Business Icon or User Icon */}
+                <div className="text-8xl mb-4">
+                  {isBusinessProfile ? '🏢' : '👤'}
                 </div>
-              )}
-              
-              {bio && (
-                <ThemedText variant="muted" className="max-w-2xl mx-auto mb-4">
-                  {bio}
+                
+                <ThemedText size="4xl" weight="black" variant="primary" glow className="mb-4">
+                  {displayName}
                 </ThemedText>
-              )}
-            
-            {/* Business Info */}
-            {isBusinessProfile && (
+                
+                {isBusinessProfile && businessProfile?.companyName !== displayName && (
+                  <ThemedText size="2xl" variant="default" className="mb-2">
+                    {businessProfile?.companyName}
+                  </ThemedText>
+                )}
+                
+                <ThemedText size="xl" variant="muted" className="mb-2">
+                  @{userProfile.username}
+                </ThemedText>
+                
+                {/* Profile Type Badge */}
+                {hoynProfile?.type && (
+                  <ThemedBadge variant="accent" size="md" className="mb-2">
+                    {hoynProfile.type === 'personal' ? 'Kişisel' : 'İş'}
+                  </ThemedBadge>
+                )}
+                
+                {/* Business Type & Sector */}
+                {isBusinessProfile && (businessProfile?.businessType || businessProfile?.sector) && (
+                  <div className="flex justify-center gap-2 mb-4">
+                    {businessProfile?.businessType && (
+                      <ThemedBadge variant="primary" size="md">
+                        {businessProfile.businessType}
+                      </ThemedBadge>
+                    )}
+                    {businessProfile?.sector && (
+                      <ThemedBadge variant="accent" size="md">
+                        {businessProfile.sector}
+                      </ThemedBadge>
+                    )}
+                  </div>
+                )}
+                
+                {bio && (
+                  <ThemedText variant="muted" className="max-w-2xl mx-auto mb-4">
+                    {bio}
+                  </ThemedText>
+                )}
+                
+                {/* Owner Actions */}
+                {isOwner && (
+                  <div className="flex flex-col sm:flex-row gap-3 justify-center mb-6">
+                    <NeonButton
+                      onClick={() => setShowCreateProfile(true)}
+                      variant="secondary"
+                      size="sm"
+                      className="w-full sm:w-auto"
+                    >
+                      ➕ Yeni Profil Oluştur
+                    </NeonButton>
+                    {ownerProfiles.length > 0 && (
+                      <NeonButton
+                        onClick={() => {
+                          // Show profiles dropdown or modal
+                          console.log('Owner profiles:', ownerProfiles);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="w-full sm:w-auto"
+                      >
+                        📋 Profillerim ({ownerProfiles.length})
+                      </NeonButton>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Business Info */}
+              {isBusinessProfile && (
                 <div className="max-w-2xl mx-auto mb-6">
                   {/* Founded Year & Employee Count */}
                   {(businessProfile?.foundedYear || businessProfile?.employeeCount) && businessProfile?.businessSettings?.showFoundedYear && (
@@ -553,181 +852,185 @@ export default function UserProfilePage({ params }: PageProps) {
                   )}
                 </div>
               )}
-            </div>
 
-            {/* Social Stats and Follow Button */}
-            <div className="mb-8 space-y-4">
-              {/* Social Stats */}
-              <SocialStats 
-                userId={userProfile.uid}
-                username={userProfile.username}
-                initialFollowersCount={userProfile.followersCount || 0}
-                initialFollowingCount={userProfile.followingCount || 0}
-                variant="inline"
-                className="justify-center"
-                clickable={true}
-              />
-              
-              {/* Follow Button */}
-              <div className="flex justify-center">
-                <FollowButton
-                  targetUserId={userProfile.uid}
-                  targetUsername={userProfile.username}
-                  targetDisplayName={displayName}
-                  className="min-w-[200px]"
+              {/* Social Stats and Follow Button */}
+              <div className="mb-8 space-y-4">
+                {/* Social Stats */}
+                <SocialStats 
+                  userId={userProfile.uid || (hoynProfile?.ownerUid || '')}
+                  username={userProfile.username}
+                  initialFollowersCount={userProfile.followersCount || 0}
+                  initialFollowingCount={userProfile.followingCount || 0}
+                  variant="inline"
+                  className="justify-center"
+                  clickable={true}
+                />
+                
+                {/* Follow Button */}
+                {!isOwner && (
+                  <div className="flex justify-center">
+                    <FollowButton
+                      targetUserId={userProfile.uid || (hoynProfile?.ownerUid || '')}
+                      targetUsername={userProfile.username}
+                      targetDisplayName={displayName}
+                      className="min-w-[200px]"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Profile Statistics */}
+              <div className="mb-10">
+                <ProfileStats 
+                  userId={userProfile.uid || (hoynProfile?.ownerUid || '')} 
+                  isOwnProfile={isOwner} 
                 />
               </div>
-            </div>
 
-            {/* Profile Statistics */}
-            <div className="mb-10">
-              <ProfileStats 
-                userId={userProfile.uid} 
-                isOwnProfile={currentUser?.uid === userProfile.uid} 
-              />
-            </div>
+              {/* Social Links & Contact */}
+              {(
+                ('instagram' in userProfile && (userProfile.instagram || userProfile.twitter)) || 
+                (isBusinessProfile && (
+                  businessProfile?.socialMedia?.instagram || 
+                  businessProfile?.socialMedia?.facebook || 
+                  businessProfile?.socialMedia?.linkedin || 
+                  businessProfile?.phone || 
+                  businessProfile?.website
+                ))
+              ) && (
+                <div className="mb-10">
+                  {/* Personal Social Media */}
+                  {'instagram' in userProfile && (userProfile.instagram || userProfile.twitter) && (
+                    <div className="flex justify-center gap-4 mb-4">
+                      {userProfile.instagram && (
+                        <ThemedButton
+                          onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
+                          variant="secondary"
+                          size="md"
+                        >
+                          📸 Instagram
+                        </ThemedButton>
+                      )}
+                      {userProfile.twitter && (
+                        <ThemedButton
+                          onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
+                          variant="secondary"
+                          size="md"
+                        >
+                          🐦 Twitter
+                        </ThemedButton>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Business Social Media & Contact */}
+                  {isBusinessProfile && (
+                    <div className="space-y-4">
+                      {/* Business Social Media */}
+                      {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
+                        businessProfile?.socialMedia?.linkedin) && (
+                        <div className="flex justify-center gap-3 flex-wrap">
+                          {businessProfile?.socialMedia?.instagram && (
+                            <NeonButton
+                              onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              📸 Instagram
+                            </NeonButton>
+                          )}
+                          {businessProfile?.socialMedia?.facebook && (
+                            <NeonButton
+                              onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              🔵 Facebook
+                            </NeonButton>
+                          )}
+                          {businessProfile?.socialMedia?.linkedin && (
+                            <NeonButton
+                              onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
+                              variant="secondary"
+                              size="sm"
+                            >
+                              💼 LinkedIn
+                            </NeonButton>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Business Contact */}
+                      {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
+                        <div className="flex justify-center gap-3 flex-wrap">
+                          {businessProfile?.phone && (
+                            <NeonButton
+                              onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              📞 {businessProfile.phone}
+                            </NeonButton>
+                          )}
+                          {businessProfile?.contactInfo?.whatsapp && (
+                            <NeonButton
+                              onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              📱 WhatsApp
+                            </NeonButton>
+                          )}
+                          {businessProfile?.website && (
+                            <NeonButton
+                              onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
+                              variant="outline"
+                              size="sm"
+                            >
+                              🌐 Website
+                            </NeonButton>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {/* Social Links & Contact */}
-            {(
-              ('instagram' in userProfile && (userProfile.instagram || userProfile.twitter)) || 
-              (isBusinessProfile && (
-                businessProfile?.socialMedia?.instagram || 
-                businessProfile?.socialMedia?.facebook || 
-                businessProfile?.socialMedia?.linkedin || 
-                businessProfile?.phone || 
-                businessProfile?.website
-              ))
-            ) && (
-              <div className="mb-10">
-                {/* Personal Social Media */}
-                {'instagram' in userProfile && (userProfile.instagram || userProfile.twitter) && (
-                  <div className="flex justify-center gap-4 mb-4">
-                    {userProfile.instagram && (
-                      <ThemedButton
-                        onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
-                        variant="secondary"
-                        size="md"
-                      >
-                        📸 Instagram
-                      </ThemedButton>
-                    )}
-                    {userProfile.twitter && (
-                      <ThemedButton
-                        onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
-                        variant="secondary"
-                        size="md"
-                      >
-                        🐦 Twitter
-                      </ThemedButton>
-                    )}
+              {/* Actions */}
+              <div className="text-center space-y-4">
+                {('allowAnonymous' in userProfile && userProfile.allowAnonymous !== false) && (
+                  <div>
+                    <ThemedButton
+                      onClick={() => router.push(`/ask/${userProfile.username}`)}
+                      variant="primary"
+                      size="lg"
+                      glow
+                      className="w-full max-w-md"
+                    >
+                      💬 Anonim Mesaj Gönder
+                    </ThemedButton>
+                    <ThemedText size="sm" variant="muted" className="mt-2 block">
+                      Kimliğin gizli kalacak, sadece mesajın iletilecek
+                    </ThemedText>
                   </div>
                 )}
                 
-                {/* Business Social Media & Contact */}
-                {isBusinessProfile && (
-                  <div className="space-y-4">
-                    {/* Business Social Media */}
-                    {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
-                      businessProfile?.socialMedia?.linkedin) && (
-                      <div className="flex justify-center gap-3 flex-wrap">
-                        {businessProfile?.socialMedia?.instagram && (
-                          <NeonButton
-                            onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            📸 Instagram
-                          </NeonButton>
-                        )}
-                        {businessProfile?.socialMedia?.facebook && (
-                          <NeonButton
-                            onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            🔵 Facebook
-                          </NeonButton>
-                        )}
-                        {businessProfile?.socialMedia?.linkedin && (
-                          <NeonButton
-                            onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            💼 LinkedIn
-                          </NeonButton>
-                        )}
-                      </div>
-                    )}
-                    
-                    {/* Business Contact */}
-                    {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
-                      <div className="flex justify-center gap-3 flex-wrap">
-                        {businessProfile?.phone && (
-                          <NeonButton
-                            onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
-                            variant="outline"
-                            size="sm"
-                          >
-                            📞 {businessProfile.phone}
-                          </NeonButton>
-                        )}
-                        {businessProfile?.contactInfo?.whatsapp && (
-                          <NeonButton
-                            onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
-                            variant="outline"
-                            size="sm"
-                          >
-                            📱 WhatsApp
-                          </NeonButton>
-                        )}
-                        {businessProfile?.website && (
-                          <NeonButton
-                            onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
-                            variant="outline"
-                            size="sm"
-                          >
-                            🌐 Website
-                          </NeonButton>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <ThemedButton
+                  onClick={() => router.push('/')}
+                  variant="outline"
+                  size="md"
+                  className="w-full max-w-md"
+                >
+                  🏠 Ana Sayfaya Dön
+                </ThemedButton>
               </div>
-            )}
-
-            {/* Actions */}
-            <div className="text-center space-y-4">
-              {('allowAnonymous' in userProfile && userProfile.allowAnonymous !== false) && (
-                <div>
-                  <ThemedButton
-                    onClick={() => router.push(`/ask/${userProfile.username}`)}
-                    variant="primary"
-                    size="lg"
-                    glow
-                    className="w-full max-w-md"
-                  >
-                    💬 Anonim Mesaj Gönder
-                  </ThemedButton>
-                  <ThemedText size="sm" variant="muted" className="mt-2 block">
-                    Kimliğin gizli kalacak, sadece mesajın iletilecek
-                  </ThemedText>
-                </div>
-              )}
-              
-              <ThemedButton
-                onClick={() => router.push('/')}
-                variant="outline"
-                size="md"
-                className="w-full max-w-md"
-              >
-                🏠 Ana Sayfaya Dön
-              </ThemedButton>
-            </div>
-          </ThemedCard>
+            </ThemedCard>
+          </div>
         </div>
-      </div>
       </ThemedProfileWrapper>
+      
+      {showCreateProfile && <ProfileCreationModal />}
+    </>
   );
 }

@@ -1,9 +1,10 @@
 // Base Profile Interface
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, doc, setDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+
 export interface BaseProfile {
   uid: string;
   email: string;
@@ -17,6 +18,23 @@ export interface BaseProfile {
   followersCount?: number;
   followingCount?: number;
 }
+
+// Multiple Profiles Support
+export interface HOYNProfile extends BaseProfile {
+  id: string;
+  ownerUid: string;
+  type: 'personal' | 'business';
+  qrData?: {
+    encryptedPayload: string;
+    version: string;
+    timestamp: Date;
+    checksum: string;
+  };
+  isActive: boolean;
+  isPrimary: boolean;
+}
+
+export type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
 
 // User Profile Interface
 export interface UserProfile extends BaseProfile {
@@ -121,8 +139,118 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID || "G-HQ6KYZZPQG"
 };
 
+// QR Encryption Utilities
+const HOYN_APP_SECRET = process.env.NEXT_PUBLIC_HOYN_QR_SECRET || 'hoyn-secret-key-2025'; // Should be proper env var
+
+export function encryptHOYNQR(payload: string): string {
+  // Simple XOR encryption for demo - replace with proper AES in production
+  let encrypted = '';
+  for (let i = 0; i < payload.length; i++) {
+    encrypted += String.fromCharCode(payload.charCodeAt(i) ^ HOYN_APP_SECRET.charCodeAt(i % HOYN_APP_SECRET.length));
+  }
+  return btoa(encrypted); // Base64 encode
+}
+
+export function decryptHOYNQR(encrypted: string): string | null {
+  try {
+    const decoded = atob(encrypted);
+    let decrypted = '';
+    for (let i = 0; i < decoded.length; i++) {
+      decrypted += String.fromCharCode(decoded.charCodeAt(i) ^ HOYN_APP_SECRET.charCodeAt(i % HOYN_APP_SECRET.length));
+    }
+    return decrypted;
+  } catch {
+    return null;
+  }
+}
+
+export function isHOYNQR(encryptedData: string): boolean {
+  const decrypted = decryptHOYNQR(encryptedData);
+  if (!decrypted) return false;
+  try {
+    const data = JSON.parse(decrypted);
+    return data.app === 'HOYN' && data.type === 'profile';
+  } catch {
+    return false;
+  }
+}
+
+export function generateQRPayload(profileId: string, username: string): string {
+  const payload = JSON.stringify({
+    app: 'HOYN',
+    type: 'profile',
+    version: '1.0',
+    profileId,
+    username,
+    timestamp: new Date().toISOString()
+  });
+  return encryptHOYNQR(payload);
+}
+
 // Firebase başlat
 const app = initializeApp(firebaseConfig);
+
+// Multiple Profile Functions
+export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {
+  try {
+    const profileId = `${profileData.username}-${Date.now()}`;
+    const profileRef = doc(db, 'profiles', profileId);
+    
+    const fullProfile: HOYNProfile = {
+      ...profileData,
+      id: profileId,
+      ownerUid,
+      type: profileData.type,
+      qrData: {
+        encryptedPayload: generateQRPayload(profileId, profileData.username),
+        version: '1.0',
+        timestamp: new Date(),
+        checksum: 'todo-hash'
+      },
+      isActive: true,
+      isPrimary,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      uid: ownerUid, // For compatibility
+      followersCount: 0,
+      followingCount: 0
+    };
+
+    await setDoc(profileRef, fullProfile);
+    return fullProfile;
+  } catch (error) {
+    console.error('Failed to create profile:', error);
+    return null;
+  }
+}
+
+export async function getHOYNProfileByUsername(username: string): Promise<HOYNProfile | null> {
+  try {
+    const profilesRef = collection(db, 'profiles');
+    const q = query(profilesRef, where('username', '==', username), where('isActive', '==', true));
+    const snapshot = await getDocs(q);
+    
+    if (snapshot.empty) return null;
+    
+    const docSnapshot = snapshot.docs[0];
+    return { ...docSnapshot.data() as HOYNProfile, id: docSnapshot.id };
+  } catch (error) {
+    console.error('Failed to get profile:', error);
+    return null;
+  }
+}
+
+export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> {
+  try {
+    const profilesRef = collection(db, 'profiles');
+    const q = query(profilesRef, where('ownerUid', '==', ownerUid), where('isActive', '==', true));
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ ...doc.data() as HOYNProfile, id: doc.id }));
+  } catch (error) {
+    console.error('Failed to get user profiles:', error);
+    return [];
+  }
+}
 
 // Hizmetleri dışa aktar
 export const auth = getAuth(app);
