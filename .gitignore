@@ -95,6 +95,9 @@ test_key.key
 hoyn_qr_veritabani.db
 dist/
 
+# qwen-code
+qwen-code/
+
 # Python
 *.pyc
 __pycache__/

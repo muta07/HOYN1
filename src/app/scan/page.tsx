@@ -43,10 +43,11 @@ export default function ScanPage() {
       
       if (result.success && result.isHOYN) {
         // Successful HOYN QR - redirect to profile
-        trackQRScan(currentUser?.uid || '', result.username || '', 'HOYN').catch(console.error);
+        await trackQRScan(currentUser?.uid || '', result.username || '', 'HOYN');
         
         if (result.username) {
-          router.push(`/u/${result.username}`);
+          // Use window.location for immediate navigation
+          window.location.href = `/u/${result.username}`;
           return;
         }
         
@@ -63,7 +64,7 @@ export default function ScanPage() {
         // Non-HOYN QR or validation error
         setError(result.message || 'QR kodu geçersiz');
         setShowWarning(true);
-        trackQRScan(currentUser?.uid || '', 'unknown', 'NON-HOYN').catch(console.error);
+        await trackQRScan(currentUser?.uid || '', 'unknown', 'NON-HOYN');
         return;
       } else {
         // API error
@@ -81,7 +82,7 @@ export default function ScanPage() {
           // Check if it's a HOYN profile URL format
           const profileMatch = data.match(/\/u\/([a-zA-Z0-9_-]+)/);
           if (profileMatch) {
-            router.push(`/u/${profileMatch[1]}`);
+            window.location.href = `/u/${profileMatch[1]}`;
             return;
           }
         }

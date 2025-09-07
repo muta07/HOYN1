@@ -202,6 +202,22 @@ npm run type-check  # Check TypeScript types
 2. Add environment variables in Vercel dashboard
 3. Deploy automatically on push
 
+### Automated Deployment Scripts
+
+This repository includes PowerShell scripts for automated deployment:
+
+1. **deploy-all.ps1** - Deploys to both GitHub and Vercel
+2. **deploy-to-github.ps1** - Deploys only to GitHub
+3. **setup-vercel-env.ps1** - Sets up Vercel environment and deploys
+
+You can also use the corresponding batch files on Windows:
+
+1. **deploy-all.bat** - Runs the complete deployment
+2. **deploy-github.bat** - Deploys to GitHub only
+3. **deploy-vercel.bat** - Deploys to Vercel only
+
+For detailed instructions, see [DEPLOYMENT.md](DEPLOYMENT.md)
+
 ## 🎯 Key Components
 
 ### Authentication (`useAuth` hook)

@@ -192,8 +192,26 @@ export function generateQRPayload(profileId: string, username: string): string {
   return encryptHOYNQR(payload);
 }
 
-// Firebase başlat
-const app = initializeApp(firebaseConfig);
+// Firebase başlat - Next.js 14 App Router uyumlu
+declare global {
+  var firebaseApp: import('firebase/app').FirebaseApp | undefined;
+}
+
+let app;
+
+// Global Firebase app instance for Next.js 14
+if (typeof window !== 'undefined') {
+  // Client-side
+  if (!globalThis.firebaseApp) {
+    app = initializeApp(firebaseConfig);
+    globalThis.firebaseApp = app;
+  } else {
+    app = globalThis.firebaseApp;
+  }
+} else {
+  // Server-side
+  app = initializeApp(firebaseConfig);
+}
 
 // Multiple Profile Functions
 export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {

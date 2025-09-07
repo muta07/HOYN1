@@ -119,6 +119,35 @@ export default function ProfilePage() {
     }
   }, [user]);
 
+  const generateProfileQR = async () => {
+    if (!user) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/generate-profile-qr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid })
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setQrGenerated(true);
+        setQrBase64(data.qrBase64);
+        setQrMode(data.qrMode);
+        alert('QR kodunuz başarıyla oluşturuldu! İndirerek kullanabilirsiniz.');
+      } else {
+        alert('QR oluşturma hatası: ' + data.error);
+      }
+    } catch (error) {
+      console.error('QR generation error:', error);
+      alert('QR oluşturma sırasında hata oluştu: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
