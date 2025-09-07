@@ -85,3 +85,26 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Hoyn QR System
+hoyn_qr_sistemi/__pycache__/
+hoyn_qr_sistemi/*.db
+hoyn_qr_sistemi/*.key
+test_db.db
+test_key.key
+hoyn_qr_veritabani.db
+dist/
+
+# Python
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+.coverage
+.pytest_cache/
+.coverage.*
+htmlcov/
+.pytest_cache/
+.pytest_cache_*/

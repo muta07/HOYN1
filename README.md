@@ -71,6 +71,34 @@ HOYN! is a cutting-edge digital identity platform that bridges the physical and 
 - **GitHub** for version control
 - **Environment variables** for configuration
 
+## 🧩 Hoyn QR System (Python)
+
+This repository also includes a standalone Python-based QR system in the `hoyn_qr_sistemi` directory:
+
+### Features
+- **Secure QR Generation** with encryption
+- **QR Scanning Simulation** for testing
+- **SQLite Database** for profile management
+- **Customizable QR Designs** with color options
+- **Security Module** for payload validation
+- **Comprehensive Testing Suite** with pytest
+
+### Components
+- `main.py` - Command-line interface
+- `qr_uretici.py` - QR code generation module
+- `qr_tarayici.py` - QR scanning simulation module
+- `guvenlik.py` - Security and encryption module
+- `veritabani.py` - Database management module
+- `ui_mesajlari.py` - User interface messages
+- `test_hoyn_qr_sistemi.py` - Unit tests
+
+### Running the Python System
+```bash
+cd hoyn_qr_sistemi
+pip install qrcode[pil] cryptography
+python main.py
+```
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -146,7 +174,7 @@ npm run type-check  # Check TypeScript types
 │   ├── app/                    # Next.js App Router pages
 │   │   ├── auth/              # Authentication pages
 │   │   ├── dashboard/         # User dashboard
-│   │   ├── designer/          # T-shirt designer
+│   │   ├── designer/         # T-shirt designer
 │   │   └── scan/             # QR scanner
 │   ├── components/            # React components
 │   │   ├── qr/               # QR-related components
@@ -155,6 +183,7 @@ npm run type-check  # Check TypeScript types
 │   ├── hooks/                # Custom React hooks
 │   ├── lib/                  # Utilities and configurations
 │   └── styles/               # Global styles
+├── hoyn_qr_sistemi/          # Standalone Python QR system
 ├── public/                   # Static assets
 └── configuration files
 ```
