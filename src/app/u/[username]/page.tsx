@@ -914,112 +914,91 @@ export default function UserProfilePage({ params }: PageProps) {
               </div>
 
               {/* Social Links & Contact */}
-              {(
-                ('instagram' in userProfile && (userProfile.socialMedia?.instagram || userProfile.socialMedia?.twitter)) || 
-                (isBusinessProfile && (
-                  businessProfile?.socialMedia?.instagram || 
-                  businessProfile?.socialMedia?.facebook || 
-                  businessProfile?.socialMedia?.linkedin || 
-                  businessProfile?.phone || 
-                  businessProfile?.website
-                ))
+              {isBusinessProfile && (
+                (businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
+                  businessProfile?.socialMedia?.linkedin || businessProfile?.socialMedia?.twitter) || 
+                businessProfile?.phone || 
+                businessProfile?.website
               ) && (
                 <div className="mb-10">
-                  {/* Personal Social Media */}
-                  {'instagram' in userProfile && (userProfile.socialMedia?.instagram || userProfile.socialMedia?.twitter) && (
-                    <div className="flex justify-center gap-4 mb-4">
-                      {userProfile.socialMedia?.instagram && (
-                        <ThemedButton
-                          onClick={() => window.open(`https://instagram.com/${userProfile.socialMedia!.instagram}`, '_blank')}
-                          variant="secondary"
-                          size="md"
-                        >
-                          📸 Instagram
-                        </ThemedButton>
-                      )}
-                      {userProfile.socialMedia?.twitter && (
-                        <ThemedButton
-                          onClick={() => window.open(`https://twitter.com/${userProfile.socialMedia!.twitter}`, '_blank')}
-                          variant="secondary"
-                          size="md"
-                        >
-                          🐦 Twitter
-                        </ThemedButton>
-                      )}
-                    </div>
-                  )}
-                  
                   {/* Business Social Media & Contact */}
-                  {isBusinessProfile && (
-                    <div className="space-y-4">
-                      {/* Business Social Media */}
-                      {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
-                        businessProfile?.socialMedia?.linkedin) && (
-                        <div className="flex justify-center gap-3 flex-wrap">
-                          {businessProfile?.socialMedia?.instagram && (
-                            <NeonButton
-                              onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
-                              variant="secondary"
-                              size="sm"
-                            >
-                              📸 Instagram
-                            </NeonButton>
-                          )}
-                          {businessProfile?.socialMedia?.facebook && (
-                            <NeonButton
-                              onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
-                              variant="secondary"
-                              size="sm"
-                            >
-                              🔵 Facebook
-                            </NeonButton>
-                          )}
-                          {businessProfile?.socialMedia?.linkedin && (
-                            <NeonButton
-                              onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
-                              variant="secondary"
-                              size="sm"
-                            >
-                              💼 LinkedIn
-                            </NeonButton>
-                          )}
-                        </div>
-                      )}
-                      
-                      {/* Business Contact */}
-                      {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
-                        <div className="flex justify-center gap-3 flex-wrap">
-                          {businessProfile?.phone && (
-                            <NeonButton
-                              onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
-                              variant="outline"
-                              size="sm"
-                            >
-                              📞 {businessProfile.phone}
-                            </NeonButton>
-                          )}
-                          {businessProfile?.contactInfo?.whatsapp && (
-                            <NeonButton
-                              onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
-                              variant="outline"
-                              size="sm"
-                            >
-                              📱 WhatsApp
-                            </NeonButton>
-                          )}
-                          {businessProfile?.website && (
-                            <NeonButton
-                              onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
-                              variant="outline"
-                              size="sm"
-                            >
-                              🌐 Website
-                            </NeonButton>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  <div className="space-y-4">
+                    {/* Business Social Media */}
+                    {(businessProfile?.socialMedia?.instagram || businessProfile?.socialMedia?.facebook || 
+                      businessProfile?.socialMedia?.linkedin || businessProfile?.socialMedia?.twitter) && (
+                      <div className="flex justify-center gap-3 flex-wrap">
+                        {businessProfile?.socialMedia?.instagram && (
+                          <NeonButton
+                            onClick={() => window.open(`https://instagram.com/${businessProfile.socialMedia!.instagram}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            📸 Instagram
+                          </NeonButton>
+                        )}
+                        {businessProfile?.socialMedia?.facebook && (
+                          <NeonButton
+                            onClick={() => window.open(`https://facebook.com/${businessProfile.socialMedia!.facebook}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            🔵 Facebook
+                          </NeonButton>
+                        )}
+                        {businessProfile?.socialMedia?.linkedin && (
+                          <NeonButton
+                            onClick={() => window.open(`https://linkedin.com/company/${businessProfile.socialMedia!.linkedin}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            💼 LinkedIn
+                          </NeonButton>
+                        )}
+                        {businessProfile?.socialMedia?.twitter && (
+                          <NeonButton
+                            onClick={() => window.open(`https://twitter.com/${businessProfile.socialMedia!.twitter}`, '_blank')}
+                            variant="secondary"
+                            size="sm"
+                          >
+                            🐦 Twitter
+                          </NeonButton>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Business Contact */}
+                    {(businessProfile?.phone || businessProfile?.website || businessProfile?.contactInfo?.whatsapp) && (
+                      <div className="flex justify-center gap-3 flex-wrap">
+                        {businessProfile?.phone && (
+                          <NeonButton
+                            onClick={() => window.open(`tel:${businessProfile.phone}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            📞 {businessProfile.phone}
+                          </NeonButton>
+                        )}
+                        {businessProfile?.contactInfo?.whatsapp && (
+                          <NeonButton
+                            onClick={() => window.open(`https://wa.me/${businessProfile.contactInfo!.whatsapp!.replace(/[^0-9]/g, '')}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            📱 WhatsApp
+                          </NeonButton>
+                        )}
+                        {businessProfile?.website && (
+                          <NeonButton
+                            onClick={() => window.open(businessProfile.website!.startsWith('http') ? businessProfile.website! : `https://${businessProfile.website}`, '_blank')}
+                            variant="outline"
+                            size="sm"
+                          >
+                            🌐 Website
+                          </NeonButton>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
