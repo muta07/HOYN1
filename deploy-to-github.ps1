@@ -49,14 +49,15 @@ git remote set-url origin "https://github.com/$GithubUsername/$RepoName.git"
 Write-Host "🚀 Pushing code to GitHub..." -ForegroundColor Cyan
 Write-Host "This may take a few minutes depending on your connection speed." -ForegroundColor Gray
 
-try {
-    # Push all branches and tags
-    git push -u origin --all
-    git push -u origin --tags
+# Push all branches and tags
+git push -u origin --all
+git push -u origin --tags
+
+if ($LASTEXITCODE -eq 0) {
     Write-Host "✅ GitHub deployment completed successfully!" -ForegroundColor Green
     Write-Host "Your repository is now available at: https://github.com/$GithubUsername/$RepoName" -ForegroundColor Blue
-} catch {
-    Write-Host "❌ Error during deployment: $_" -ForegroundColor Red
-    Write-Host "Please check your internet connection and GitHub credentials." -ForegroundColor Yellow
+} else {
+    Write-Host "❌ Error during deployment. Please check your internet connection and GitHub credentials." -ForegroundColor Red
     exit 1
+}
 }
