@@ -355,7 +355,7 @@ export default function UserProfilePage({ params }: PageProps) {
   // Get display name - handle HOYNProfile
   const displayName = ('displayName' in userProfile && typeof userProfile.displayName === 'string') ? userProfile.displayName : 
                      ('businessName' in userProfile && typeof userProfile.businessName === 'string') ? userProfile.businessName : 
-                     (userProfile.nickname && typeof userProfile.nickname === 'string') ? userProfile.nickname : 
+                     ('nickname' in userProfile && typeof userProfile.nickname === 'string') ? userProfile.nickname : 
                      ('username' in userProfile && typeof userProfile.username === 'string') ? userProfile.username : 
                      '';
   
