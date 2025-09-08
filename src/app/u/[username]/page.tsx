@@ -886,7 +886,7 @@ export default function UserProfilePage({ params }: PageProps) {
                   userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                   username={'username' in userProfile ? userProfile.username : username}
                   initialFollowersCount={'stats' in userProfile ? userProfile.stats?.followers || 0 : 0}
-                  initialFollowingCount={'stats' in userProfile ? userProfile.stats?.following || 0 : 0}
+                  initialFollowingCount={'stats' in userProfile ? userProfile.stats?.followers || 0 : 0}
                   variant="inline"
                   className="justify-center"
                   clickable={true}
