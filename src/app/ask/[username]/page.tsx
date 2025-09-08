@@ -25,6 +25,12 @@ export default function AskPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Check if Firebase is initialized
+    if (!db) {
+      setError('Mesajlaşma sistemi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
+      return;
+    }
+    
     if (!message.trim()) {
       setError('Mesaj boş olamaz!');
       return;
