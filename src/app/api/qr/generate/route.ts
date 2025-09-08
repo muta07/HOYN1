@@ -3,6 +3,14 @@ import { db } from '@/lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
+  // Check if Firebase is initialized
+  if (!db) {
+    return NextResponse.json(
+      { error: 'Firebase is not initialized' }, 
+      { status: 500 }
+    );
+  }
+  
   try {
     const { ownerId, redirectUrl, isPublic = false } = await request.json();
 
