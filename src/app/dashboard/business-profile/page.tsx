@@ -143,6 +143,12 @@ export default function BusinessProfilePage() {
   const handleSave = async () => {
     if (!user) return;
 
+    // Check if Firebase is initialized
+    if (!db) {
+      alert('Firebase başlatılmadı. Lütfen daha sonra tekrar deneyin.');
+      return;
+    }
+
     setLoading(true);
     try {
       const userRef = doc(db, 'users', user.uid);
