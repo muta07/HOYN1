@@ -50,6 +50,13 @@ export default function MessagesPanel({ isOpen, onClose }: MessagesPanelProps) {
   useEffect(() => {
     if (!user || !username || !isOpen) return;
 
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot load messages.');
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     
     const q = query(
@@ -103,6 +110,12 @@ export default function MessagesPanel({ isOpen, onClose }: MessagesPanelProps) {
 
   // Mark message as read
   const markAsRead = async (messageId: string) => {
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot mark message as read.');
+      return;
+    }
+
     try {
       await updateDoc(doc(db, 'messages', messageId), {
         read: true
@@ -115,6 +128,12 @@ export default function MessagesPanel({ isOpen, onClose }: MessagesPanelProps) {
   // Send reply message
   const sendReply = async () => {
     if (!newMessage.trim() || !replyTo || !user) return;
+
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot send reply.');
+      return;
+    }
 
     try {
       await addDoc(collection(db, 'messages'), {
