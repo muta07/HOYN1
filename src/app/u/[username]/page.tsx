@@ -353,9 +353,11 @@ export default function UserProfilePage({ params }: PageProps) {
   );
   
   // Get display name - handle HOYNProfile
-  const displayName = 'displayName' in userProfile ? userProfile.displayName : 
-                     'businessName' in userProfile ? userProfile.businessName : 
-                     userProfile.nickname || ('username' in userProfile ? userProfile.username : '');
+  const displayName = ('displayName' in userProfile && typeof userProfile.displayName === 'string') ? userProfile.displayName : 
+                     ('businessName' in userProfile && typeof userProfile.businessName === 'string') ? userProfile.businessName : 
+                     (userProfile.nickname && typeof userProfile.nickname === 'string') ? userProfile.nickname : 
+                     ('username' in userProfile && typeof userProfile.username === 'string') ? userProfile.username : 
+                     '';
   
   // Check if this is a business profile
   const isBusinessProfile = ('type' in userProfile && (userProfile as HOYNProfile).type === 'business') || ('businessName' in userProfile);
@@ -884,7 +886,7 @@ export default function UserProfilePage({ params }: PageProps) {
                   userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                   username={'username' in userProfile ? userProfile.username : username}
                   initialFollowersCount={'stats' in userProfile ? userProfile.stats?.followers || 0 : 0}
-                  initialFollowingCount={'stats' in userProfile ? userProfile.stats?.followers || 0 : 0}
+                  initialFollowingCount={'stats' in userProfile ? userProfile.stats?.following || 0 : 0}
                   variant="inline"
                   className="justify-center"
                   clickable={true}
@@ -896,7 +898,7 @@ export default function UserProfilePage({ params }: PageProps) {
                     <FollowButton
                       targetUserId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                       targetUsername={'username' in userProfile ? userProfile.username : username}
-                      targetDisplayName={displayName}
+                      targetDisplayName={displayName.toString()}
                       className="min-w-[200px]"
                     />
                   </div>
