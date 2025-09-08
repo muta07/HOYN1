@@ -90,6 +90,6 @@ try {
         Write-Host "Your application is available at: https://$VercelProjectName.vercel.app" -ForegroundColor Blue
     }
 } catch {
-    Write-Host "Error during deployment: $_" -ForegroundColor Red
+    Write-Host "Error during deployment" -ForegroundColor Red
     exit 1
 }
