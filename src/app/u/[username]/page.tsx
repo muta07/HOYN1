@@ -731,9 +731,9 @@ export default function UserProfilePage({ params }: PageProps) {
                   {displayName?.toString() || ''}
                 </ThemedText>
                 
-                {isBusinessProfile && businessProfile?.companyName !== displayName && (
+                {isBusinessProfile && businessProfile?.businessName !== displayName && (
                   <ThemedText size="2xl" variant="default" className="mb-2">
-                    {businessProfile?.companyName}
+                    {businessProfile?.businessName}
                   </ThemedText>
                 )}
                 
