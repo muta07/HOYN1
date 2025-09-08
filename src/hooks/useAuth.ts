@@ -58,6 +58,12 @@ export const useAuth = () => {
 
   // Email/Password ile giriş
   const loginWithEmail = async (email: string, password: string) => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot login with email.');
+      throw new Error('Firebase Auth is not initialized');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -73,6 +79,12 @@ export const useAuth = () => {
 
   // Email/Password ile kayıt
   const registerWithEmail = async (email: string, password: string, displayName?: string, nickname?: string) => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot register with email.');
+      throw new Error('Firebase Auth is not initialized');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -96,6 +108,12 @@ export const useAuth = () => {
 
   // Google ile giriş
   const loginWithGoogle = async () => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot login with Google.');
+      throw new Error('Firebase Auth is not initialized');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -123,6 +141,12 @@ export const useAuth = () => {
     website?: string,
     description?: string
   ) => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot register business with email.');
+      throw new Error('Firebase Auth is not initialized');
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -159,6 +183,12 @@ export const useAuth = () => {
 
   // Çıkış yap
   const logout = async () => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot logout.');
+      throw new Error('Firebase Auth is not initialized');
+    }
+
     try {
       setLoading(true);
       setError(null);
