@@ -881,7 +881,7 @@ export default function UserProfilePage({ params }: PageProps) {
               <div className="mb-8 space-y-4">
                 {/* Social Stats */}
                 <SocialStats 
-                  userId={userProfile.uid || (hoynProfile?.ownerUid || '')}
+                  userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                   username={'username' in userProfile ? userProfile.username : username}
                   initialFollowersCount={userProfile.followersCount || 0}
                   initialFollowingCount={userProfile.followingCount || 0}
@@ -894,7 +894,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 {!isOwner && (
                   <div className="flex justify-center">
                     <FollowButton
-                      targetUserId={userProfile.uid || (hoynProfile?.ownerUid || '')}
+                      targetUserId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                       targetUsername={'username' in userProfile ? userProfile.username : username}
                       targetDisplayName={displayName}
                       className="min-w-[200px]"
@@ -906,7 +906,7 @@ export default function UserProfilePage({ params }: PageProps) {
               {/* Profile Statistics */}
               <div className="mb-10">
                 <ProfileStats 
-                  userId={userProfile.uid || (hoynProfile?.ownerUid || '')} 
+                  userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')} 
                   isOwnProfile={!!isOwner} 
                 />
               </div>
