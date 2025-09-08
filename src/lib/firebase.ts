@@ -207,28 +207,55 @@ declare global {
   var firebaseApp: import('firebase/app').FirebaseApp | undefined;
 }
 
-let app: import('firebase/app').FirebaseApp;
+let app: import('firebase/app').FirebaseApp | null = null;
+let db: import('firebase/firestore').Firestore | null = null;
+let storage: import('firebase/storage').Storage | null = null;
+let auth: import('firebase/auth').Auth | null = null;
 
-if (typeof window !== 'undefined' && !globalThis.firebaseApp) {
-  app = initializeApp(firebaseConfig);
-  globalThis.firebaseApp = app;
-} else if (typeof window !== 'undefined') {
-  app = globalThis.firebaseApp!;
-} else {
-  app = initializeApp(firebaseConfig);
+try {
+  if (firebaseConfig.apiKey) {
+    if (typeof window !== 'undefined' && !globalThis.firebaseApp) {
+      app = initializeApp(firebaseConfig);
+      globalThis.firebaseApp = app;
+    } else if (typeof window !== 'undefined' && globalThis.firebaseApp) {
+      app = globalThis.firebaseApp;
+    } else if (firebaseConfig.apiKey) {
+      app = initializeApp(firebaseConfig);
+    }
+    
+    if (app) {
+      db = getFirestore(app);
+      storage = getStorage(app);
+      auth = getAuth(app);
+    }
+  }
+} catch (error) {
+  console.error('Failed to initialize Firebase:', error);
+  // Set defaults to null if Firebase fails to initialize
+  app = null;
+  db = null;
+  storage = null;
+  auth = null;
 }
 
-const db = getFirestore(app);
-const storage = getStorage(app);
-const auth = getAuth(app);
-
-// Export Firebase instances
+// Export Firebase instances (may be null if Firebase is not configured)
 export { db, storage, auth };
+
+// Helper function to check if Firebase is initialized
+function isFirebaseInitialized(): boolean {
+  return db !== null && auth !== null && storage !== null;
+}
 
 export async function createProfile(
   ownerUid: string, 
   profileData: Omit<Profile, 'id' | 'ownerUid' | 'createdAt' | 'stats'>
 ): Promise<Profile | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Profile creation skipped.');
+    return null;
+  }
+  
   try {
     const profileId = `${profileData.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const slug = `${profileData.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -267,6 +294,12 @@ export async function createProfile(
 }
 
 export async function getUserProfiles(ownerUid: string): Promise<Profile[]> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning empty profiles array.');
+    return [];
+  }
+  
   try {
     const profilesRef = collection(db, 'profiles');
     const q = query(profilesRef, where('ownerUid', '==', ownerUid));
@@ -282,6 +315,12 @@ export async function getUserProfiles(ownerUid: string): Promise<Profile[]> {
 }
 
 export async function getPrimaryProfileForUser(ownerUid: string): Promise<Profile | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+  
   try {
     const profiles = await getUserProfiles(ownerUid);
     // Return the first profile or null if none exist
@@ -293,6 +332,12 @@ export async function getPrimaryProfileForUser(ownerUid: string): Promise<Profil
 }
 
 export async function getProfileById(profileId: string): Promise<Profile | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+  
   try {
     const profileRef = doc(db, 'profiles', profileId);
     const docSnap = await getDoc(profileRef);
@@ -307,6 +352,12 @@ export async function getProfileById(profileId: string): Promise<Profile | null>
 }
 
 export async function getProfileBySlug(slug: string): Promise<Profile | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+  
   try {
     const profilesRef = collection(db, 'profiles');
     const q = query(profilesRef, where('slug', '==', slug));
@@ -329,6 +380,12 @@ export async function updateProfile(
   profileId: string, 
   updates: Partial<Omit<Profile, 'id' | 'ownerUid' | 'createdAt'>>
 ): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Profile update skipped.');
+    return false;
+  }
+  
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await updateDoc(profileRef, { 
@@ -343,6 +400,12 @@ export async function updateProfile(
 }
 
 export async function deleteProfile(profileId: string): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Profile deletion skipped.');
+    return false;
+  }
+  
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await deleteDoc(profileRef);
@@ -358,6 +421,12 @@ export async function incrementProfileStats(
   statType: 'views' | 'scans' | 'messages' | 'followers', 
   incrementValue: number = 1
 ): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Stats increment skipped.');
+    return false;
+  }
+  
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await updateDoc(profileRef, {
@@ -374,6 +443,16 @@ export async function getUserSettings(userId: string): Promise<{
   canReceiveMessages: boolean;
   canReceiveAnonymous: boolean;
 } | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning default user settings.');
+    // Default settings if Firebase is not available
+    return {
+      canReceiveMessages: true,
+      canReceiveAnonymous: true
+    };
+  }
+  
   try {
     const settingsRef = doc(db, 'user_settings', userId);
     const docSnap = await getDoc(settingsRef);
@@ -397,6 +476,12 @@ export async function getUserSettings(userId: string): Promise<{
 
 // Helper function to get user display name
 export async function getUserDisplayName(userId: string): Promise<string> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning user ID as display name.');
+    return userId;
+  }
+  
   try {
     const userRef = doc(db, 'users', userId);
     const docSnap = await getDoc(userRef);
