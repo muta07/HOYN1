@@ -908,7 +908,7 @@ export default function UserProfilePage({ params }: PageProps) {
               {/* Profile Statistics */}
               <div className="mb-10">
                 <ProfileStats 
-                  userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')} 
+                  profileId={userProfile.id} 
                   isOwnProfile={!!isOwner} 
                 />
               </div>
