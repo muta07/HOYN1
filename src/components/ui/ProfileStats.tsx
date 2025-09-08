@@ -2,43 +2,46 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getUserStats, incrementProfileViews, formatStatNumber, UserStats } from '@/lib/stats';
+import { getProfileById, incrementProfileStats } from '@/lib/firebase';
+import { formatStatNumber } from '@/lib/stats';
+import { Profile } from '@/lib/firebase';
 import Loading from './Loading';
 import AnimatedCard from './AnimatedCard';
+import NeonButton from './NeonButton';
 
 interface ProfileStatsProps {
-  userId: string;
+  profileId: string;
   isOwnProfile?: boolean;
   className?: string;
 }
 
 export default function ProfileStats({ 
-  userId, 
+  profileId, 
   isOwnProfile = false, 
   className = '' 
 }: ProfileStatsProps) {
-  const [stats, setStats] = useState<UserStats | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load stats and increment view if not own profile
+  // Load profile and stats, increment view if not own profile
   useEffect(() => {
-    const loadStats = async () => {
+    const loadProfile = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        // Get current stats
-        const userStats = await getUserStats(userId);
+        // Get current profile with stats
+        const loadedProfile = await getProfileById(profileId);
         
-        if (userStats) {
-          setStats(userStats);
+        if (loadedProfile && loadedProfile.stats) {
+          setProfile(loadedProfile);
           
           // Increment profile view if it's not the owner viewing their own profile
           if (!isOwnProfile) {
-            await incrementProfileViews(userId);
+            await incrementProfileStats(profileId, 'views', 1);
             // Update local state to reflect the increment
-            setStats(prev => prev ? { ...prev, views: prev.views + 1 } : null);
+            setProfile(prev => prev ? { ...prev, stats: { ...prev.stats, views: prev.stats.views + 1 } } : null);
           }
         } else {
           setError('İstatistikler yüklenemedi');
@@ -51,10 +54,10 @@ export default function ProfileStats({
       }
     };
 
-    if (userId) {
-      loadStats();
+    if (profileId) {
+      loadProfile();
     }
-  }, [userId, isOwnProfile]);
+  }, [profileId, isOwnProfile]);
 
   if (loading) {
     return (
@@ -66,7 +69,7 @@ export default function ProfileStats({
     );
   }
 
-  if (error || !stats) {
+  if (error || !profile) {
     return (
       <div className={`glass-effect p-6 rounded-xl cyber-border bg-red-900/20 border-red-500/30 ${className}`}>
         <div className="text-center">
@@ -80,28 +83,36 @@ export default function ProfileStats({
 
   const statItems = [
     {
-      label: 'QR Tarama',
-      value: stats.scans,
-      icon: '📱',
-      color: 'text-blue-400',
-      bgColor: 'bg-blue-900/20',
-      description: 'QR kodun kaç kez tarandı'
-    },
-    {
-      label: 'Profil Görüntüleme',
-      value: stats.views,
-      icon: '👀',
+      label: '👁️ Görünümler',
+      value: profile.stats.views,
+      icon: '👁️',
       color: 'text-purple-400',
       bgColor: 'bg-purple-900/20',
       description: 'Profilin kaç kez görüntülendi'
     },
     {
-      label: 'Link Tıklama',
-      value: stats.clicks,
+      label: '🔗 QR Taramaları',
+      value: profile.stats.scans,
       icon: '🔗',
-      color: 'text-green-400',
-      bgColor: 'bg-green-900/20',
-      description: 'Linklerinden kaç tıklama aldın'
+      color: 'text-blue-400',
+      bgColor: 'bg-blue-900/20',
+      description: 'QR kodun kaç kez tarandı'
+    },
+    {
+      label: '💌 Mesajlar',
+      value: profile.stats.messages,
+      icon: '💌',
+      color: 'text-pink-400',
+      bgColor: 'bg-pink-900/20',
+      description: 'Alınan mesaj sayısı (normal + anonim)'
+    },
+    {
+      label: '⭐ Takipçiler',
+      value: profile.stats.followers,
+      icon: '⭐',
+      color: 'text-yellow-400',
+      bgColor: 'bg-yellow-900/20',
+      description: 'Profilini takip eden kişi sayısı'
     }
   ];
 
@@ -119,13 +130,13 @@ export default function ProfileStats({
         )}
       </div>
       
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statItems.map((item, index) => (
           <div
             key={item.label}
-            className={`${item.bgColor} border border-gray-600 rounded-lg p-4 text-center transition-all duration-300 hover:scale-105 hover:border-purple-500/50`}
+            className={`neon-card ${item.bgColor} border border-gray-600 rounded-lg p-4 text-center transition-all duration-300 hover:scale-105 hover:border-purple-500/50 hover:shadow-purple-500/25`}
           >
-            <div className="text-2xl mb-2">{item.icon}</div>
+            <div className={`text-3xl mb-2 ${item.color}`}>{item.icon}</div>
             <div className={`text-2xl font-bold ${item.color} mb-1`}>
               {formatStatNumber(item.value)}
             </div>
@@ -142,10 +153,10 @@ export default function ProfileStats({
       </div>
 
       {/* Last Updated */}
-      {isOwnProfile && stats.lastUpdated && (
+      {isOwnProfile && profile.updatedAt && (
         <div className="mt-4 pt-4 border-t border-gray-700">
           <p className="text-xs text-gray-500 text-center">
-            Son güncelleme: {new Date().toLocaleDateString('tr-TR')}
+            Son güncelleme: {new Date(profile.updatedAt).toLocaleDateString('tr-TR')}
           </p>
         </div>
       )}
@@ -158,7 +169,7 @@ export default function ProfileStats({
             İpucu
           </h4>
           <p className="text-xs text-gray-300">
-            QR kodunu sosyal medyada paylaş, profil görüntülenmelerini artır!
+            QR kodunu sosyal medyada paylaş, profil görüntülenmelerini ve takipçilerini artır!
           </p>
         </div>
       )}

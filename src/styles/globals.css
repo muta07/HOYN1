@@ -42,9 +42,37 @@ body {
   }
 }
 
+@keyframes glow-stat {
+  0%, 100% {
+    text-shadow: 0 0 5px #9C27B0, 0 0 10px #9C27B0;
+  }
+  50% {
+    text-shadow: 0 0 10px #E040FB, 0 0 20px #E040FB;
+  }
+}
+
+@keyframes neon-border-pulse {
+  0% {
+    border-color: #9C27B0;
+    box-shadow: 0 0 5px #9C27B0, 0 0 10px #9C27B0;
+  }
+  50% {
+    border-color: #E040FB;
+    box-shadow: 0 0 15px #E040FB, 0 0 25px #E040FB;
+  }
+  100% {
+    border-color: #9C27B0;
+    box-shadow: 0 0 5px #9C27B0, 0 0 10px #9C27B0;
+  }
+}
+
 /* Utility Classes */
 .glow-text {
   animation: glow 2s ease-in-out infinite;
+}
+
+.glow-text-stat {
+  animation: glow-stat 2s ease-in-out infinite;
 }
 
 .float {
@@ -63,6 +91,12 @@ body {
   border: 2px solid transparent;
   background: linear-gradient(45deg, #9C27B0, #E040FB) border-box;
   animation: pulse-border 2s ease-in-out infinite;
+}
+
+.cyber-border-neon {
+  border: 2px solid;
+  border-color: #9C27B0;
+  animation: neon-border-pulse 2s ease-in-out infinite;
 }
 
 .glass-effect {
@@ -266,4 +300,39 @@ body {
 .parallax-element {
   transform: translateZ(0);
   will-change: transform;
+}
+
+/* Additional Neon Effects for QR Scanner */
+.cyber-border-glow {
+  box-shadow: 0 0 15px rgba(168, 85, 247, 0.5);
+}
+
+.neon-border-pulse {
+  animation: neon-border-pulse 2s linear infinite;
+}
+
+@keyframes scan-line-neon {
+  0% { 
+    transform: translateY(-100%); 
+    opacity: 1;
+    box-shadow: 0 0 10px #a855f7, 0 0 20px #a855f7;
+  }
+  100% { 
+    transform: translateY(100%); 
+    opacity: 0;
+    box-shadow: 0 0 5px #a855f7, 0 0 10px #a855f7;
+  }
+}
+
+.animate-scan-line-neon {
+  animation: scan-line-neon 2s linear infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
 }

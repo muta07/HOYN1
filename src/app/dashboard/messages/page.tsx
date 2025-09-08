@@ -1,252 +1,527 @@
-// src/app/dashboard/messages/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { db } from '@/lib/firebase';
-import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import NeonButton from '@/components/ui/NeonButton';
+import { 
+  getUserConversations, 
+  getUserMessages, 
+  onConversationsSnapshot, 
+  onMessagesSnapshot,
+  markMessageAsRead,
+  getUserDisplayName
+} from '@/lib/firebase';
 import Loading from '@/components/ui/Loading';
-import AnimatedCard from '@/components/ui/AnimatedCard';
+import NeonButton from '@/components/ui/NeonButton';
+import { Message, Conversation } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
-interface Message {
+interface ProcessedConversation {
   id: string;
-  message: string;
-  timestamp: any;
-  read: boolean;
-  to: string;
+  displayName: string;
+  avatarUrl: string;
+  lastMessage: string;
+  lastUpdated: number;
+  unreadCount: number;
+  isAnonymous: boolean;
+  participants: string[];
+}
+
+interface ProcessedMessage {
+  id: string;
+  senderId: string | null;
+  senderName: string;
+  text: string;
+  timestamp: Date;
+  isOwnMessage: boolean;
+  isAnonymous: boolean;
 }
 
 export default function MessagesPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [conversations, setConversations] = useState<ProcessedConversation[]>([]);
+  const [allMessages, setAllMessages] = useState<Message[]>([]);
+  const [activeTab, setActiveTab] = useState<'inbox' | 'anonymous'>('inbox');
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'unread'>('unread');
+  const [selectedConversation, setSelectedConversation] = useState<ProcessedConversation | null>(null);
+  const [currentMessages, setCurrentMessages] = useState<ProcessedMessage[]>([]);
+  const [messageInput, setMessageInput] = useState('');
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [totalUnread, setTotalUnread] = useState(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get current username
-  const username = user?.displayName || 
-    (user?.email ? user.email.split('@')[0] : 'kullanici');
-
+  // Real-time listeners
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/auth/login');
-    }
-  }, [user, authLoading, router]);
+    if (!user?.uid) return;
 
-  useEffect(() => {
-    if (!user || !username) return;
+    let conversationsUnsubscribe: (() => void) | null = null;
+    let messagesUnsubscribe: (() => void) | null = null;
 
-    const q = query(
-      collection(db, 'messages'),
-      where('to', '==', username),
-      orderBy('timestamp', 'desc')
-    );
+    const loadInitialData = async () => {
+      try {
+        setLoading(true);
+        
+        // Load initial conversations
+        const initialConversations = await getUserConversations(user.uid);
+        const processedConversations = await processConversations(initialConversations, user.uid);
+        setConversations(processedConversations);
+        
+        // Load initial messages
+        const initialMessages = await getUserMessages(user.uid);
+        setAllMessages(initialMessages);
+        
+        // Calculate total unread
+        const totalUnreadCount = processedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
+        setTotalUnread(totalUnreadCount);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+        setLoading(false);
+      }
+    };
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const messageList: Message[] = [];
-      snapshot.forEach((doc) => {
-        messageList.push({
-          id: doc.id,
-          ...doc.data()
-        } as Message);
-      });
-      setMessages(messageList);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching messages:', error);
-      setLoading(false);
+    loadInitialData();
+
+    // Set up real-time listeners
+    conversationsUnsubscribe = onConversationsSnapshot(user.uid, (snapshotConversations) => {
+      processConversations(snapshotConversations, user.uid).then(setConversations);
     });
 
-    return () => unsubscribe();
-  }, [user, username]);
+    messagesUnsubscribe = onMessagesSnapshot(user.uid, (snapshotMessages) => {
+      setAllMessages(snapshotMessages);
+      
+      // Update current conversation messages if one is selected
+      if (selectedConversation) {
+        updateCurrentMessages();
+      }
+    });
 
-  const markAsRead = async (messageId: string) => {
-    try {
-      await updateDoc(doc(db, 'messages', messageId), {
-        read: true
-      });
-    } catch (error) {
-      console.error('Error marking message as read:', error);
-    }
+    return () => {
+      if (conversationsUnsubscribe) conversationsUnsubscribe();
+      if (messagesUnsubscribe) messagesUnsubscribe();
+    };
+  }, [user?.uid]);
+
+  // Process conversations for display
+  const processConversations = async (conversations: Conversation[], currentUserId: string): Promise<ProcessedConversation[]> => {
+    return Promise.all(
+      conversations.map(async (conv): Promise<ProcessedConversation> => {
+        let displayName = '';
+        let avatarUrl = '/api/placeholder/40/40';
+        let isAnonymous = false;
+
+        if (conv.isAnonymousThread) {
+          displayName = 'Anonymous';
+          isAnonymous = true;
+        } else {
+          // Find the other participant
+          const otherParticipant = conv.participants.find(id => id !== currentUserId);
+          if (otherParticipant) {
+            displayName = await getUserDisplayName(otherParticipant);
+            // Avatar would be fetched here in a real implementation
+            avatarUrl = '/api/placeholder/40/40';
+          } else {
+            displayName = 'Unknown User';
+          }
+        }
+
+        const unreadCount = conv.unreadCounts?.[currentUserId] || 0;
+        // Handle lastUpdated as either Date or Firestore timestamp
+        let lastMessageTime = 0;
+        if (conv.lastUpdated) {
+          if (conv.lastUpdated instanceof Date) {
+            lastMessageTime = conv.lastUpdated.getTime();
+          } else if (conv.lastUpdated && typeof (conv.lastUpdated as any).toDate === 'function') {
+            lastMessageTime = (conv.lastUpdated as any).toDate().getTime();
+          } else {
+            lastMessageTime = new Date(conv.lastUpdated).getTime();
+          }
+        }
+
+        return {
+          id: conv.id,
+          displayName,
+          avatarUrl,
+          lastMessage: conv.lastMessage || '',
+          lastUpdated: lastMessageTime,
+          unreadCount,
+          isAnonymous,
+          participants: conv.participants
+        };
+      })
+    );
   };
 
-  const deleteMessage = async (messageId: string) => {
-    if (!confirm('Bu mesajı silmek istediğinize emin misiniz?')) return;
+  // Update messages for current conversation
+  const updateCurrentMessages = () => {
+    if (!selectedConversation || !allMessages.length) return;
+
+    // For proper conversation filtering, we need to check messages for this specific conversation
+    // Since messages now have recipientId and senderId, we can filter more accurately
+    const conversationMessages = allMessages.filter(msg => {
+      if (selectedConversation.isAnonymous) {
+        // For anonymous conversations, filter by recipient and anonymous sender
+        return msg.recipientId === user?.uid && msg.senderId === null;
+      } else {
+        // For normal conversations, check if either sender or recipient matches the participants
+        const senderId = msg.senderId || null;
+        return selectedConversation.participants.includes(senderId || '') || 
+               selectedConversation.participants.includes(msg.recipientId);
+      }
+    });
+
+    const processedMessages = conversationMessages
+      .map(msg => {
+        const senderId = msg.senderId || null;
+        // Handle timestamp as either Date or Firestore timestamp
+        let timestamp: Date;
+        if (msg.timestamp instanceof Date) {
+          timestamp = msg.timestamp;
+        } else if (msg.timestamp && typeof (msg.timestamp as any).toDate === 'function') {
+          timestamp = (msg.timestamp as any).toDate();
+        } else {
+          timestamp = new Date(msg.timestamp);
+        }
+        
+        return {
+          id: msg.id,
+          senderId,
+          senderName: msg.senderName,
+          text: msg.text,
+          timestamp,
+          isOwnMessage: senderId === user?.uid,
+          isAnonymous: senderId === null
+        };
+      })
+      .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    setCurrentMessages(processedMessages);
     
+    // Mark as read if it's not the anonymous thread and there are new messages
+    if (!selectedConversation.isAnonymous && processedMessages.length > 0) {
+      markMessageAsRead(selectedConversation.id, '', user!.uid);
+    }
+
+    // Scroll to bottom
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  // Send message to conversation
+  const sendMessageToConversation = async () => {
+    if (!messageInput.trim() || !selectedConversation || !user) return;
+
+    setSendingMessage(true);
+
     try {
-      await deleteDoc(doc(db, 'messages', messageId));
+      const response = await fetch('/api/messages/send', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          recipientId: selectedConversation.isAnonymous 
+            ? selectedConversation.id.replace('_anonymous', '') 
+            : selectedConversation.participants.find(id => id !== user.uid),
+          text: messageInput,
+          isAnonymous: selectedConversation.isAnonymous,
+          senderName: user.displayName
+        })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to send message');
+      }
+
+      setMessageInput('');
     } catch (error) {
-      console.error('Error deleting message:', error);
+      console.error('Failed to send message:', error);
+      alert('Mesaj gönderilemedi: ' + (error as Error).message);
+    } finally {
+      setSendingMessage(false);
     }
   };
 
-  const filteredMessages = messages.filter(msg => 
-    filter === 'all' ? true : !msg.read
+  // Filter conversations by tab
+  const filteredConversations = conversations.filter(conv => 
+    activeTab === 'inbox' ? !conv.isAnonymous : conv.isAnonymous
   );
 
-  const unreadCount = messages.filter(msg => !msg.read).length;
+  // Get total unread for current tab
+  const tabUnreadCount = filteredConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
 
-  const formatDate = (timestamp: any) => {
-    if (!timestamp) return 'Yeni';
-    
-    const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-    const now = new Date();
-    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 3600);
-    
-    if (diffInHours < 1) return 'Az önce';
-    if (diffInHours < 24) return `${Math.floor(diffInHours)} saat önce`;
-    if (diffInHours < 168) return `${Math.floor(diffInHours / 24)} gün önce`;
-    
-    return date.toLocaleDateString('tr-TR');
-  };
+  // Auto-scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages]);
 
-  if (authLoading || loading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loading size="lg" text="Mesajlar yükleniyor..." />
+        <Loading text="Mesajlar yükleniyor..." />
       </div>
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-bold text-white mb-4">Giriş Yapın</h2>
+          <p className="text-gray-400 mb-6">Mesajları görüntülemek için giriş yapmanız gerekiyor.</p>
+          <NeonButton onClick={() => window.location.href = '/auth/login'} className="px-8">
+            Giriş Yap
+          </NeonButton>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <AnimatedCard direction="up" delay={0}>
-          <div className="text-center mb-8">
-            <h1 className="text-4xl font-black glow-text font-orbitron mb-4">
-              📬 Mesaj Kutusu
-            </h1>
-            <p className="text-gray-300">
-              Sana gelen anonim mesajlar burada görünür
-            </p>
-            {unreadCount > 0 && (
-              <div className="inline-block bg-purple-600 text-white px-3 py-1 rounded-full text-sm font-bold mt-2">
-                {unreadCount} okunmamış mesaj
-              </div>
+    <div className="min-h-screen bg-black text-white">
+      {/* Header with notification badge */}
+      <div className="sticky top-0 bg-black/95 backdrop-blur-lg border-b border-purple-900/50 z-10 p-4">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Mesajlar {totalUnread > 0 && (
+              <span className="ml-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                {totalUnread > 99 ? '99+' : totalUnread}
+              </span>
             )}
-          </div>
-        </AnimatedCard>
-
-        {/* Filter Buttons */}
-        <AnimatedCard direction="up" delay={100} className="mb-6">
-          <div className="flex justify-center gap-4">
-            <NeonButton
-              onClick={() => setFilter('unread')}
-              variant={filter === 'unread' ? 'primary' : 'outline'}
-              size="md"
+          </h1>
+          <div className="flex gap-2">
+            <NeonButton 
+              variant="outline" 
+              size="sm" 
+              className={activeTab === 'inbox' ? 'bg-purple-600 text-white' : ''}
+              onClick={() => setActiveTab('inbox')}
             >
-              Okunmamışlar ({unreadCount})
+              Gelen Kutusu
+              {activeTab === 'inbox' && tabUnreadCount > 0 && (
+                <span className="ml-1 bg-red-500 text-white text-xs px-1 py-0.5 rounded-full">
+                  {tabUnreadCount > 9 ? '9+' : tabUnreadCount}
+                </span>
+              )}
             </NeonButton>
-            <NeonButton
-              onClick={() => setFilter('all')}
-              variant={filter === 'all' ? 'primary' : 'outline'}
-              size="md"
+            <NeonButton 
+              variant="outline" 
+              size="sm" 
+              className={activeTab === 'anonymous' ? 'bg-purple-600 text-white' : ''}
+              onClick={() => setActiveTab('anonymous')}
             >
-              Tümü ({messages.length})
+              Anonim
+            </NeonButton>
+            <NeonButton 
+              variant="primary" 
+              size="sm" 
+              onClick={() => router.push('/dashboard/messages/profile-messages')}
+            >
+              Profil Mesajları
             </NeonButton>
           </div>
-        </AnimatedCard>
+        </div>
+      </div>
 
-        {/* Messages List */}
-        {filteredMessages.length === 0 ? (
-          <AnimatedCard direction="up" delay={200}>
-            <div className="glass-effect p-12 rounded-xl cyber-border text-center">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-2xl font-bold text-white mb-2">
-                {filter === 'unread' ? 'Okunmamış mesaj yok' : 'Henüz mesaj yok'}
-              </h3>
-              <p className="text-gray-400 mb-6">
-                QR kodunu paylaş, insanlar sana anonim mesaj göndersin!
+      <div className="flex h-[calc(100vh-80px)]">
+        {/* Conversations List */}
+        <div className="w-full md:w-1/3 border-r border-gray-800 bg-gray-900/50 overflow-y-auto">
+          {filteredConversations.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">
+              <div className="text-6xl mb-4">💬</div>
+              <p className="text-lg">Henüz {activeTab === 'inbox' ? 'mesajınız' : 'anonim mesajınız'} yok</p>
+              <p className="text-sm opacity-75">
+                {activeTab === 'inbox' 
+                  ? 'Profil sayfalarından mesaj gönderebilirsiniz' 
+                  : 'Anonim mesajlar için profil sayfalarındaki anonim butonunu kullanın'
+                }
               </p>
-              <NeonButton
-                onClick={() => router.push('/dashboard/qr-generator')}
-                variant="primary"
-                size="lg"
-                glow
-              >
-                ✨ QR Kodunu Oluştur
-              </NeonButton>
             </div>
-          </AnimatedCard>
-        ) : (
-          <div className="space-y-4">
-            {filteredMessages.map((message, index) => (
-              <AnimatedCard 
-                key={message.id} 
-                direction="up" 
-                delay={200 + (index * 100)}
-              >
-                <div className={`glass-effect p-6 rounded-xl cyber-border transition-all ${
-                  !message.read ? 'border-purple-500 glow-subtle' : 'border-gray-700'
-                }`}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="text-2xl">🕵️</div>
-                      <div>
-                        <h3 className="font-bold text-white">Anonim Mesaj</h3>
-                        <p className="text-sm text-gray-400">
-                          {formatDate(message.timestamp)}
+          ) : (
+            <div className="space-y-0">
+              {filteredConversations.map((conversation) => (
+                <div
+                  key={conversation.id}
+                  onClick={() => {
+                    setSelectedConversation(conversation);
+                    setTimeout(() => updateCurrentMessages(), 100);
+                  }}
+                  className={`p-4 border-b border-gray-800 cursor-pointer hover:bg-gray-800/50 transition-colors ${
+                    selectedConversation?.id === conversation.id 
+                      ? 'bg-purple-900/20 border-l-4 border-purple-500' 
+                      : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-1">
+                        <img 
+                          src={conversation.avatarUrl} 
+                          alt={conversation.displayName}
+                          className="w-10 h-10 rounded-full"
+                        />
+                        <div>
+                          <h3 className="font-semibold text-white truncate">
+                            {conversation.displayName}
+                          </h3>
+                          <p className="text-xs text-gray-400">
+                            {conversation.isAnonymous ? 'Anonim' : conversation.participants.length + ' katılımcı'}
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-gray-400 truncate max-w-[200px] mb-1">
+                        {conversation.lastMessage}
+                      </p>
+                    </div>
+                    <div className="text-right ml-3 flex-shrink-0">
+                      <p className="text-xs text-gray-500 mb-1">
+                        {new Date(conversation.lastUpdated).toLocaleDateString('tr-TR', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </p>
+                      {conversation.unreadCount > 0 && (
+                        <div className="w-5 h-5 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-xs text-white font-bold">
+                            {conversation.unreadCount > 9 ? '9+' : conversation.unreadCount}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Messages Area */}
+        <div className="w-full md:w-2/3 flex flex-col">
+          {selectedConversation ? (
+            <>
+              {/* Messages Header */}
+              <div className="p-4 border-b border-gray-800 bg-gray-900/50 sticky top-0 z-10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <img 
+                      src={selectedConversation.avatarUrl} 
+                      alt={selectedConversation.displayName}
+                      className="w-10 h-10 rounded-full"
+                    />
+                    <div>
+                      <h2 className="font-semibold text-white">
+                        {selectedConversation.displayName}
+                      </h2>
+                      <p className="text-sm text-gray-400">
+                        {selectedConversation.isAnonymous ? 'Anonim mesajlaşma' : 'Özel mesajlaşma'}
+                      </p>
+                    </div>
+                  </div>
+                  <NeonButton 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedConversation(null)}
+                  >
+                    Geri
+                  </NeonButton>
+                </div>
+              </div>
+
+              {/* Messages List */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-black/50" ref={messagesEndRef}>
+                {currentMessages.length === 0 ? (
+                  <div className="text-center py-8 text-gray-400">
+                    <div className="text-4xl mb-2">💬</div>
+                    <p>Henüz mesaj yok</p>
+                    <p className="text-sm opacity-75 mt-2">
+                      {selectedConversation.isAnonymous 
+                        ? 'Anonim mesaj göndererek sohbeti başlatın' 
+                        : 'Mesaj göndererek sohbeti başlatın'
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  currentMessages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.isAnonymous ? 'justify-center' : ''} ${
+                        message.isOwnMessage ? 'justify-end' : 'justify-start'
+                      }`}
+                    >
+                      <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                        message.isAnonymous 
+                          ? 'bg-purple-600/20 text-purple-300 border border-purple-500/30' 
+                          : message.isOwnMessage 
+                            ? 'bg-blue-600/20 text-blue-300 border border-blue-500/30' 
+                            : 'bg-gray-700/50 text-gray-300 border border-gray-600'
+                      }`}>
+                        <p className="whitespace-pre-wrap">{message.text}</p>
+                        <p className={`text-xs mt-1 opacity-75 ${
+                          message.isOwnMessage ? 'text-right' : ''
+                        }`}>
+                          {message.timestamp.toLocaleDateString('tr-TR', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </p>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2">
-                      {!message.read && (
-                        <span className="bg-purple-600 text-white text-xs px-2 py-1 rounded-full font-bold">
-                          YENİ
-                        </span>
-                      )}
-                      <button
-                        onClick={() => deleteMessage(message.id)}
-                        className="text-red-400 hover:text-red-300 transition-colors"
-                        title="Mesajı Sil"
-                      >
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gray-900/50 p-4 rounded-lg mb-4">
-                    <p className="text-white leading-relaxed">
-                      {message.message}
-                    </p>
-                  </div>
-                  
-                  {!message.read && (
-                    <div className="flex justify-end">
-                      <NeonButton
-                        onClick={() => markAsRead(message.id)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        ✅ Okundu İşaretle
-                      </NeonButton>
-                    </div>
-                  )}
-                </div>
-              </AnimatedCard>
-            ))}
-          </div>
-        )}
+                  ))
+                )}
+              </div>
 
-        {/* Back Button */}
-        <AnimatedCard direction="up" delay={400} className="mt-8">
-          <div className="text-center">
-            <NeonButton
-              onClick={() => router.push('/dashboard')}
-              variant="secondary"
-              size="lg"
-              className="min-w-[200px]"
-            >
-              ← Dashboard'a Dön
-            </NeonButton>
-          </div>
-        </AnimatedCard>
+              {/* Message Input */}
+              <div className="p-4 border-t border-gray-800 bg-gray-900/50">
+                <div className="flex gap-2">
+                  <textarea
+                    value={messageInput}
+                    onChange={(e) => setMessageInput(e.target.value)}
+                    placeholder={selectedConversation.isAnonymous 
+                      ? "Anonim mesaj yazın..." 
+                      : "Mesaj yazın..."
+                    }
+                    className="flex-1 p-3 bg-gray-800 border border-gray-700 rounded-lg text-white resize-none focus:border-purple-500 focus:outline-none"
+                    rows={1}
+                    maxLength={selectedConversation.isAnonymous ? 100 : 1000}
+                    disabled={sendingMessage}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendMessageToConversation();
+                      }
+                    }}
+                  />
+                  <NeonButton
+                    onClick={sendMessageToConversation}
+                    disabled={!messageInput.trim() || sendingMessage}
+                    variant="primary"
+                    size="sm"
+                    className="w-12 h-12 flex items-center justify-center"
+                  >
+                    {sendingMessage ? '...' : '➤'}
+                  </NeonButton>
+                </div>
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {messageInput.length}/{selectedConversation.isAnonymous ? 100 : 1000}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center p-8">
+              <div className="text-center text-gray-400">
+                <div className="text-6xl mb-4">💬</div>
+                <h3 className="text-lg font-semibold mb-2">
+                  {activeTab === 'inbox' ? 'Gelen Kutusu' : 'Anonim Mesajlar'}
+                </h3>
+                <p className="opacity-75">Bir sohbet seçin veya profil sayfalarından mesaj gönderin</p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

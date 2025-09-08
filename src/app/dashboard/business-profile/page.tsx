@@ -79,7 +79,7 @@ export default function BusinessProfilePage() {
     if (user && profile) {
       const bp = profile as BusinessProfile;
       setFormData({
-        companyName: bp.companyName || '',
+        companyName: bp.businessName || '',  // Changed from companyName to businessName
         nickname: bp.nickname || '',
         description: bp.description || '',
         businessType: bp.businessType || '',
@@ -148,7 +148,7 @@ export default function BusinessProfilePage() {
       const userRef = doc(db, 'users', user.uid);
       
       const updateData = {
-        companyName: formData.companyName,
+        businessName: formData.companyName,  // Changed from companyName to businessName
         nickname: formData.nickname || formData.companyName,
         description: formData.description,
         businessType: formData.businessType,

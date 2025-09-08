@@ -16,40 +16,53 @@ import time
 
 from guvenlik import guvenlik_yoneticisi
 
-def sifrelenmis_veri_olustur(profil_id: str, username: str, qr_type: str = "profile", mode: str = "profile") -> str:
+def sifrelenmis_veri_olustur(profil_id: str, username: str = "", qr_type: str = "profile", mode: str = "profile") -> str:
     """
     Frontend uyumlu HOYN QR payload oluşturur.
     Girdiler: profil_id (str), username (str), qr_type (str), mode (str)
     Çıktı: Şifrelenmiş base64 string
     """
-    # Frontend beklediği formatı oluştur
+    from guvenlik import sifrelenmis_qr_payload_olustur
+    
+    # Güvenlik modülünden temel payload oluştur
+    base_payload = sifrelenmis_qr_payload_olustur(profil_id)
+    
+    # Frontend uyumlu formatı oluştur
     hoyn_payload = {
         "hoyn": True,
         "type": qr_type,
         "username": username,
         "profil_id": profil_id,
         "mode": mode,
-        "url": f"https://hoyn.app/u/{username}",  # Frontend için URL
-        "createdAt": int(time.time() * 1000),  # Timestamp in milliseconds
-        "version": "1.1"
+        "url": f"https://hoyn.app/u/{username}" if username else f"https://hoyn.app/p/{profil_id}",
+        "createdAt": int(time.time() * 1000),
+        "version": "1.1",
+        "sistem_kimligi": "HOYN_QR_V1"
     }
     
     # Güvenlik modülünden şifrele
     return guvenlik_yoneticisi.veri_sifrele(hoyn_payload)
 
-def qr_olustur(username: str, profil_id: str, qr_type: str = "profile", mode: str = "profile", arka_renk: str = "#FFFFFF", on_plan_renk: str = "#000000", logo_ekle: bool = False, ai_tasarim_modu: bool = False) -> str:
+def qr_olustur(profil_id: str, arka_renk: str = "#FFFFFF", on_plan_renk: str = "#000000", logo_ekle: bool = False, ai_tasarim_modu: bool = False, username: str = "") -> str:
     """
     Frontend uyumlu HOYN QR kodu üretir.
     AI tasarımı: Basit renk varyasyonu simülasyonu (gerçek AI için external API çağrısı eklenebilir).
-    Girdiler: username (str), profil_id (str), qr_type (str), mode (str), arka_renk (str), on_plan_renk (str), logo_ekle (bool), ai_tasarim_modu (bool)
+    Girdiler: profil_id (str), arka_renk (str), on_plan_renk (str), logo_ekle (bool), ai_tasarim_modu (bool), username (str)
     Çıktı: base64 formatında QR resmi
     """
+    # Güvenlik payload oluştur (main.py uyumlu)
+    from guvenlik import sifrelenmis_qr_payload_olustur
+    sifrelenmis_veri = sifrelenmis_qr_payload_olustur(profil_id)
+    
     # Frontend uyumlu şifrelenmiş veri oluştur
-    sifrelenmis_veri = sifrelenmis_veri_olustur(profil_id, username, qr_type, mode)
+    frontend_veri = sifrelenmis_veri_olustur(profil_id, username)
+    
+    # QR için frontend verisini kullan
+    qr_data = frontend_veri
     
     # QR nesnesi oluştur
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(sifrelenmis_veri)
+    qr.add_data(qr_data)
     qr.make(fit=True)
     
     # AI modu aktifse renkleri karıştır (basit simülasyon)
@@ -80,7 +93,7 @@ def qr_olustur(username: str, profil_id: str, qr_type: str = "profile", mode: st
 
 # Test fonksiyonu
 if __name__ == "__main__":
-    test_username = "testuser123"
     test_profil_id = str(uuid.uuid4())
-    qr_base64 = qr_olustur(test_username, test_profil_id, ai_tasarim_modu=True)
+    test_username = "testuser123"
+    qr_base64 = qr_olustur(test_profil_id, ai_tasarim_modu=True, username=test_username)
     print("QR Base64:", qr_base64[:100] + "...")  # Kısa göster

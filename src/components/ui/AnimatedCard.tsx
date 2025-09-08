@@ -11,6 +11,7 @@ interface AnimatedCardProps {
   direction?: 'up' | 'down' | 'left' | 'right' | 'scale';
   magnetic?: boolean;
   hover3d?: boolean;
+  glow?: boolean;  // Add glow property
   onClick?: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function AnimatedCard({
   direction = 'up',
   magnetic = false,
   hover3d = true,
+  glow = false,  // Default to false
   onClick
 }: AnimatedCardProps) {
   const { isVisible, elementRef: scrollRef } = useScrollAnimation({
@@ -81,6 +83,7 @@ export default function AnimatedCard({
       className={`
         ${getAnimationClasses()}
         ${hover3d ? 'hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/25' : ''}
+        ${glow ? 'cyber-border' : ''}  // Add cyber-border class when glow is true
         ${className}
       `}
       style={{

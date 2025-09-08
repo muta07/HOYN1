@@ -3,8 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { db } from '@/lib/firebase';
-import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
+import { onConversationsSnapshot } from '@/lib/firebase';
 import MessagesPanel from './MessagesPanel';
 
 export default function MessagesButton() {
@@ -13,36 +12,29 @@ export default function MessagesButton() {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Get current username
-  const username = user?.displayName || 
-    (user?.email ? user.email.split('@')[0] : 'kullanici');
-
   // Subscribe to unread messages count
   useEffect(() => {
-    if (!user || !username) {
+    if (!user?.uid) {
       setUnreadCount(0);
       return;
     }
 
     setLoading(true);
     
-    const q = query(
-      collection(db, 'messages'),
-      where('to', '==', username),
-      where('read', '==', false),
-      orderBy('timestamp', 'desc')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setUnreadCount(snapshot.size);
-      setLoading(false);
-    }, (error) => {
-      console.error('Unread messages count error:', error);
+    // Set up real-time listener for conversations
+    const unsubscribe = onConversationsSnapshot(user.uid, (conversations) => {
+      const unreadCount = conversations.reduce((sum, conv) => {
+        return sum + (conv.unreadCounts?.[user.uid] || 0);
+      }, 0);
+      
+      setUnreadCount(unreadCount);
       setLoading(false);
     });
 
-    return () => unsubscribe();
-  }, [user, username]);
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [user?.uid]);
 
   // Don't show if user is not authenticated
   if (!user) return null;

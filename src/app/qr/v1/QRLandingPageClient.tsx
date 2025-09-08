@@ -7,14 +7,15 @@ import AnimatedCard from '@/components/ui/AnimatedCard';
 
 interface QRLandingPageClientProps {
   hoynData: {
-    u?: string;
-    t?: string;
+    u?: string; // username
+    t?: string; // type
+    s?: string; // slug
     // add other fields if necessary
   };
 }
 
 export default function QRLandingPageClient({ hoynData }: QRLandingPageClientProps) {
-  const { u: username, t: type } = hoynData;
+  const { u: username, t: type, s: slug } = hoynData;
 
   // Construct the deep link for the app
   const appLink = `hoyn://qr/scan?data=${encodeURIComponent(JSON.stringify(hoynData))}`;
@@ -50,6 +51,25 @@ export default function QRLandingPageClient({ hoynData }: QRLandingPageClientPro
             className="w-full"
           >
             🚀 HOYN! Uygulamasında Aç
+          </NeonButton>
+          <NeonButton
+            variant="outline"
+            size="lg"
+            onClick={() => {
+              // If we have a slug, redirect to the web profile page
+              if (slug) {
+                window.location.href = `/p/${slug}`;
+              } else if (username) {
+                // Fallback to username-based URL
+                window.location.href = `/u/${username}`;
+              } else {
+                // Fallback to store link
+                window.location.href = storeLink;
+              }
+            }}
+            className="w-full"
+          >
+            🌐 Web Tarayıcıda Aç
           </NeonButton>
           <NeonButton
             variant="outline"

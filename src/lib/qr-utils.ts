@@ -47,14 +47,13 @@ export function getUserUsername(user: User | null): string {
 /**
  * Creates user profile in Firestore
  */
-export async function createUserProfile(user: User, displayName: string, nickname?: string): Promise<UserProfile> {
+export async function createUserProfile(user: User, displayName: string, nickname?: string): Promise<any> {
   const username = getUserUsername(user);
-  const profile: UserProfile = {
+  const profile = {
     uid: user.uid,
     email: user.email!,
     displayName: displayName.trim(),
     nickname: nickname?.trim() || displayName.trim(),
-    username,
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -99,10 +98,9 @@ export async function createBusinessProfile(
   phone?: string,
   website?: string,
   description?: string
-): Promise<BusinessProfile> {
+): Promise<any> {
   const username = getUserUsername(user);
-  const profile: BusinessProfile = {
-    uid: user.uid,
+  const profile = {
     email: user.email!,
     companyName: companyName.trim(),
     ownerName: ownerName.trim(),
@@ -112,7 +110,6 @@ export async function createBusinessProfile(
     phone: phone?.trim(),
     website: website?.trim(),
     description: description?.trim(),
-    username,
     createdAt: new Date(),
     updatedAt: new Date(),
     isVerified: false
@@ -304,6 +301,16 @@ export function generateHOYNQR(
   console.log(`📦 Generated HOYN QR URL: ${finalUrl}`);
   
   return finalUrl;
+}
+
+/**
+ * Generates profile-specific QR URL in the format https://hoyn-1.vercel.app/p/{profileId}
+ */
+export function generateProfileQRUrl(profileId: string): string {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+    (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+    
+  return `${baseUrl}/p/${profileId}`;
 }
 
 /**

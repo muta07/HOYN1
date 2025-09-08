@@ -1,0 +1,78 @@
+// Firebase Security Rules for HOYN! QR System
+// These rules should be implemented in Firebase Console
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Profiles collection
+    match /profiles/{profileId} {
+      // Allow read access to all users for public profiles
+      allow read: if resource.data.isPublic == true;
+      
+      // Allow create access to authenticated users
+      allow create: if request.auth != null;
+      
+      // Allow update access only to the profile owner
+      allow update: if request.auth != null && 
+                    request.auth.uid == resource.data.ownerUid;
+      
+      // Allow delete access only to the profile owner
+      allow delete: if request.auth != null && 
+                    request.auth.uid == resource.data.ownerUid;
+      
+      // Field validation for profile updates
+      allow update: if validateProfileUpdate();
+    }
+    
+    // User settings collection
+    match /user_settings/{userId} {
+      // Allow read/write access only to the user themselves
+      allow read, write: if request.auth != null && 
+                         request.auth.uid == userId;
+    }
+    
+    // Messages collection
+    match /messages/{messageId} {
+      // Allow read/write access only to sender or recipient
+      allow read, write: if request.auth != null && 
+                         (request.auth.uid == resource.data.senderId || 
+                          request.auth.uid == resource.data.recipientId);
+    }
+    
+    // Conversations collection
+    match /conversations/{conversationId} {
+      // Allow read/write access only to participants
+      allow read, write: if request.auth != null && 
+                         request.auth.uid in resource.data.participants;
+    }
+    
+    // Function to validate profile updates
+    function validateProfileUpdate() {
+      // Only allow profile owner to update
+      return request.auth.uid == resource.data.ownerUid &&
+             // Validate that only allowed fields are being updated
+             validateProfileFields();
+    }
+    
+    // Function to validate profile fields
+    function validateProfileFields() {
+      // Allow updating basic profile information
+      let allowedFields = [
+        'displayName', 'bio', 'imageUrl', 'socialLinks', 
+        'showMode', 'customMessage', 'customSong', 'mood',
+        'isPublic', 'updatedAt'
+      ];
+      
+      // Don't allow updating protected fields
+      let protectedFields = [
+        'id', 'ownerUid', 'slug', 'type', 'createdAt', 'stats'
+      ];
+      
+      // Check that no protected fields are being updated
+      return !request.resource.data.diff(resource.data).affectedKeys()
+              .hasAny(protectedFields) &&
+             // Check that only allowed fields are present
+             request.resource.data.keys().hasOnly(allowedFields);
+    }
+  }
+}

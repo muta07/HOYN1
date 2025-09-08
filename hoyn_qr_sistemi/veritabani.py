@@ -199,7 +199,7 @@ class HoynVeritabaniYoneticisi:
             conn.close()
     
     def qr_tarama_logla(self, profil_id: str, tarayici_tipi: str, user_agent: str = None, 
-                        ip_adresi: str = None, cografl_konum: str = None, basarili_mi: bool = False) -> bool:
+                        ip_adresi: str = None, cografik_konum: str = None, basarili_mi: bool = False) -> bool:
         """
         QR tarama işlemini loglar.
         Girdiler: profil_id (str), tarayici_tipi (str), user_agent (str), ip_adresi (str), 
@@ -214,7 +214,7 @@ class HoynVeritabaniYoneticisi:
                 INSERT INTO qr_tarama_loglari 
                 (profil_id, tarayici_tipi, user_agent, ip_adresi, coğrafi_konum, basarili_mi)
                 VALUES (?, ?, ?, ?, ?, ?)
-            """, (profil_id, tarayici_tipi, user_agent, ip_adresi, cografl_konum, basarili_mi))
+            """, (profil_id, tarayici_tipi, user_agent, ip_adresi, cografik_konum, basarili_mi))
             
             conn.commit()
             print(f"📝 QR tarama loglandı: {tarayici_tipi} - Başarılı: {basarili_mi}")
@@ -262,7 +262,7 @@ class HoynVeritabaniYoneticisi:
                     "tarayici_tipi": satir[2],
                     "user_agent": satir[3],
                     "ip_adresi": satir[4],
-                    "cografl_konum": satir[5],
+                    "cografik_konum": satir[5],
                     "tarama_zamani": satir[6],
                     "basarili_mi": bool(satir[7])
                 })

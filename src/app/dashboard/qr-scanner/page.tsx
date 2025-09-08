@@ -50,8 +50,6 @@ export default function QRScannerPage() {
         {/* Scanner Component */}
         <QRScanner
           className="mb-8"
-          onScanSuccess={handleScanSuccess}
-          onScanError={handleScanError}
         />
 
         {/* Additional Info Section */}

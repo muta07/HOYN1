@@ -92,9 +92,9 @@ export default function LinktreeProfilePage() {
         </div>
 
         {/* Profile Statistics */}
-        <div className="mb-8">
-          <ProfileStats userId={user.uid} isOwnProfile={true} />
-        </div>
+        {/* <div className="mb-8">
+          <ProfileStats profileId="" isOwnProfile={true} />
+        </div> */}
 
         {/* QR Information */}
         <div className="glass-effect p-6 rounded-xl cyber-border mb-8">

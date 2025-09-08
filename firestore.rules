@@ -1,10 +1,87 @@
-// Firestore Security Rules for HOYN! Platform
-// These rules ensure that users can only access their own data
-// Deploy with: firebase deploy --only firestore:rules
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Profiles collection - users can manage their own profiles, public profiles readable
+    match /profiles/{profileId} {
+      // Owners can read/write their own profiles
+      allow read, write: if request.auth != null && 
+                           request.auth.uid == resource.data.ownerUid;
+      
+      // Authenticated users can read public profiles
+      allow read: if request.auth != null && 
+                     resource.data.isPublic == true;
+      
+      // Allow authenticated users to increment stats counters
+      allow update: if request.auth != null &&
+                       (request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.views']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.scans']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.clicks']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.views', 'stats.lastUpdated']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.scans', 'stats.lastUpdated']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.clicks', 'stats.lastUpdated']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.followers']) ||
+                       request.resource.data.diff(resource.data).affectedKeys()
+                       .hasOnly(['stats.followers', 'stats.lastUpdated']));
+      
+      // Messages subcollection - anyone can send messages, only owner can read/reply
+      match /messages/{messageId} {
+        // Anyone can send messages (write-only)
+        allow create: if request.resource.data.keys().hasAll(['content', 'senderId', 'isAnonymous', 'timestamp']) &&
+                        request.resource.data.content is string &&
+                        request.resource.data.content.size() > 0 &&
+                        request.resource.data.content.size() <= (request.resource.data.isAnonymous ? 100 : 300);
+        
+        // Only profile owner can read messages
+        allow read: if request.auth != null && 
+                       request.auth.uid == resource.data.ownerUid;
+        
+        // Only profile owner can update (for replies)
+        allow update: if request.auth != null && 
+                         request.auth.uid == resource.data.ownerUid &&
+                         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['replied', 'replyContent']);
+        
+        // No delete for message integrity
+        allow delete: if false;
+      }
+      
+      // Followers subcollection - authenticated users can follow, only profile owner can read full list
+      match /followers/{followerId} {
+        // Authenticated users can follow (write-only)
+        allow create: if request.auth != null &&
+                        request.resource.data.keys().hasAll(['followerId', 'followerProfileId', 'followedAt']) &&
+                        request.resource.data.followerId == request.auth.uid;
+        
+        // Only profile owner can read followers list
+        allow read: if request.auth != null && 
+                       request.auth.uid == resource.data.ownerUid;
+        
+        // No updates or deletes for follow integrity
+        allow update, delete: if false;
+      }
+      
+      // Following subcollection - authenticated users can follow, only profile owner can read full list
+      match /following/{followingId} {
+        // Authenticated users can follow (write-only)
+        allow create: if request.auth != null &&
+                        request.resource.data.keys().hasAll(['followingProfileId', 'followedAt']) &&
+                        request.auth.uid == resource.data.followingProfileId;
+        
+        // Only profile owner can read following list
+        allow read: if request.auth != null && 
+                       request.auth.uid == resource.data.followingProfileId;
+        
+        // No updates or deletes for follow integrity
+        allow update, delete: if false;
+      }
+    }
     
     // Users collection - users can only read/write their own profile
     match /users/{userId} {
@@ -23,17 +100,46 @@ service cloud.firestore {
       allow read: if request.auth != null;
     }
     
-    // Messages collection - users can read messages sent to them or by them
-    match /messages/{messageId} {
+    // User settings - users can manage their own messaging preferences
+    match /user_settings/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Conversations collection - users can only access conversations they're part of
+    match /conversations/{conversationId} {
+      // Users can read conversations they're participants in
       allow read: if request.auth != null && 
-                     (request.auth.uid == resource.data.to || 
-                      request.auth.uid == resource.data.from);
+                     request.auth.uid in resource.data.participants;
       
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.from &&
-                       request.resource.data.keys().hasAll(['to', 'from', 'text', 'timestamp']);
+      // Users can create conversations with themselves and recipient as participants
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasAll(['participants', 'lastMessage', 'lastUpdated']) &&
+                       request.auth.uid in request.resource.data.participants &&
+                       request.resource.data.participants.size() == 2;
       
-      // Prevent message editing/deletion for privacy
+      // Participants can update lastMessage and lastUpdated
+      allow update: if request.auth != null &&
+                       request.auth.uid in resource.data.participants &&
+                       request.resource.data.diff(resource.data).affectedKeys().hasAll(['lastMessage', 'lastUpdated']) &&
+                       request.resource.data.participants == resource.data.participants;
+      
+      allow delete: if false; // Conversations can't be deleted
+    }
+    
+    // Messages subcollection - messages within conversations
+    match /conversations/{conversationId}/messages/{messageId} {
+      // Participants can read messages in their conversations
+      allow read: if request.auth != null && 
+                     request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+      
+      // Participants can create messages, check recipient settings for anonymous
+      allow create: if request.auth != null &&
+                       request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants &&
+                       request.resource.data.keys().hasAll(['senderId', 'senderName', 'recipientId', 'text', 'timestamp']) &&
+                       (request.resource.data.senderId == null || request.resource.data.senderId == request.auth.uid) &&
+                       request.resource.data.senderName in ['Anonymous', get(/databases/$(database)/documents/users/$(request.auth.uid)).data.displayName];
+      
+      // No updates or deletes for message integrity
       allow update, delete: if false;
     }
     
@@ -53,12 +159,29 @@ service cloud.firestore {
     
     // QR codes collection - users can manage their own QR codes
     match /qrcodes/{qrId} {
-      allow read, write: if request.auth != null && 
-                            request.auth.uid == resource.data.get('userId', '');
+      // Allow creation by authenticated users
+      allow create: if request.auth != null &&
+                       request.resource.data.keys().hasAll(['ownerId', 'redirectUrl', 'used', 'createdAt']) &&
+                       request.resource.data.ownerId == request.auth.uid;
       
-      // Allow reading public QR codes
+      // Allow read by owner or if public
       allow read: if request.auth != null && 
-                     resource.data.get('isPublic', false) == true;
+                     (resource.data.ownerId == request.auth.uid ||
+                      resource.data.isPublic == true);
+      
+      // Allow updates only by owner and only for specific fields
+      allow update: if request.auth != null && 
+                       request.auth.uid == resource.data.ownerId &&
+                       // Only allow updating used status and scan info
+                       (request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['used', 'lastScanBy', 'lastScanAt']) ||
+                        request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['used']) ||
+                        request.resource.data.diff(resource.data).affectedKeys()
+                        .hasOnly(['lastScanBy', 'lastScanAt']));
+      
+      // No delete for QR code integrity
+      allow delete: if false;
     }
     
     // QR modes collection - users can manage their own QR display modes
@@ -70,20 +193,6 @@ service cloud.firestore {
                       request.auth.uid == userId &&
                       request.resource.data.keys().hasAll(['mode', 'content', 'userId']) &&
                       request.resource.data.mode in ['profile', 'note', 'song'];
-    }
-    
-    // Anonymous messages - special handling for anonymous communication
-    match /anonymous_messages/{messageId} {
-      // Allow creating anonymous messages to any user
-      allow create: if request.auth != null &&
-                       request.resource.data.keys().hasAll(['to', 'text', 'timestamp', 'anonymous']);
-      
-      // Allow reading messages sent to the authenticated user
-      allow read: if request.auth != null && 
-                     request.auth.uid == resource.data.to;
-      
-      // No updates or deletes for privacy
-      allow update, delete: if false;
     }
     
     // User uploads/files - users can manage their own uploads

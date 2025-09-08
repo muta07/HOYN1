@@ -1,507 +1,198 @@
-// src/app/dashboard/profile/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
-import { getUserDisplayName, getUserUsername, updateUserProfile, updateBusinessProfile } from '@/lib/qr-utils';
-import { getUserQRMode, updateUserQRMode, QRMode, formatQRModeDisplay, validateNoteContent, validateSongContent, NoteContent, SongContent } from '@/lib/qr-modes';
-import NeonButton from '@/components/ui/NeonButton';
+import { getUserProfiles, createProfile, deleteProfile } from '@/lib/firebase';
+import { Profile } from '@/lib/firebase';
 import Loading from '@/components/ui/Loading';
-import ProfileStats from '@/components/ui/ProfileStats';
+import NeonButton from '@/components/ui/NeonButton';
+import ProfileCard from '@/components/profile/ProfileCard';
 
-export default function ProfilePage() {
-  const { user, profile, loading: authLoading } = useAuth();
+export default function ProfileDashboard() {
+  const { user, loading: authLoading } = useAuth();
   const router = useRouter();
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creatingProfile, setCreatingProfile] = useState(false);
+  const [newProfileType, setNewProfileType] = useState<'personal' | 'business' | 'car' | 'tshirt' | 'pet'>('personal');
+  const [newProfileName, setNewProfileName] = useState('');
 
-  const [displayName, setDisplayName] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [bio, setBio] = useState('');
-  const [instagram, setInstagram] = useState('');
-  const [twitter, setTwitter] = useState('');
-  const [allowAnonymous, setAllowAnonymous] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [qrGenerated, setQrGenerated] = useState(false);
-  const [qrBase64, setQrBase64] = useState('');
-  
-  // QR Mode states
-  const [qrMode, setQrMode] = useState<QRMode>('profile');
-  const [noteContent, setNoteContent] = useState<NoteContent>({ text: '', title: '', emoji: '📝' });
-  const [songContent, setSongContent] = useState<SongContent>({ url: '', platform: 'spotify', title: '', artist: '' });
-  const [qrModeLoading, setQrModeLoading] = useState(true);
-
-  // Kullanıcı giriş yapmamışsa anasayfaya yönlendir
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/');
+    if (!user) {
+      router.push('/auth/login');
+      return;
     }
-  }, [user, authLoading, router]);
 
-  // Profil yüklenince formu doldur
-  useEffect(() => {
-    if (profile) {
-      // Business profile check
-      if ('companyName' in profile) {
-        setDisplayName(profile.companyName || '');
-        setNickname(profile.nickname || '');
-        setBio(profile.description || '');
-      } else {
-        // Personal profile
-        setDisplayName(profile.displayName || '');
-        setNickname(profile.nickname || '');
-        setBio(profile.bio || '');
-      }
-    } else if (user) {
-      setDisplayName(user.displayName || '');
-      setNickname('');
-      setBio('');
-    }
-  }, [profile, user]);
+    loadProfiles();
+  }, [user, router]);
 
-  // Load user's QR mode configuration
-  useEffect(() => {
-    const loadQRMode = async () => {
-      if (user) {
-        setQrModeLoading(true);
-        try {
-          const qrModeData = await getUserQRMode(user.uid);
-          if (qrModeData) {
-            setQrMode(qrModeData.mode);
-            
-            // Parse content based on mode
-            if (qrModeData.mode === 'note' && qrModeData.content) {
-              try {
-                const parsedNote = JSON.parse(qrModeData.content) as NoteContent;
-                setNoteContent(parsedNote);
-              } catch (error) {
-                console.warn('Error parsing note content, using default');
-                setNoteContent({ text: qrModeData.content, title: '', emoji: '📝' });
-              }
-            } else if (qrModeData.mode === 'song' && qrModeData.content) {
-              try {
-                const parsedSong = JSON.parse(qrModeData.content) as SongContent;
-                setSongContent(parsedSong);
-              } catch (error) {
-                console.warn('Error parsing song content, using default');
-                setSongContent({ url: qrModeData.content, platform: 'other', title: '', artist: '' });
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error loading QR mode:', error);
-        } finally {
-          setQrModeLoading(false);
-        }
-      }
-    };
-
-    loadQRMode();
-  }, [user]);
-
-  // Load existing QR if generated
-  useEffect(() => {
-    if (user) {
-      const checkQRStatus = async () => {
-        try {
-          const response = await fetch(`/api/generate-profile-qr?userId=${user.uid}`);
-          const data = await response.json();
-          if (data.qrGenerated) {
-            setQrGenerated(true);
-            setQrBase64(data.qrBase64);
-            setQrMode(data.qrMode);
-          }
-        } catch (error) {
-          console.error('Error checking QR status:', error);
-        }
-      };
-
-      checkQRStatus();
-    }
-  }, [user]);
-
-  const generateProfileQR = async () => {
+  const loadProfiles = async () => {
     if (!user) return;
 
-    setLoading(true);
     try {
-      const response = await fetch('/api/generate-profile-qr', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.uid })
-      });
-
-      const data = await response.json();
-      
-      if (data.success) {
-        setQrGenerated(true);
-        setQrBase64(data.qrBase64);
-        setQrMode(data.qrMode);
-        alert('QR kodunuz başarıyla oluşturuldu! İndirerek kullanabilirsiniz.');
-      } else {
-        alert('QR oluşturma hatası: ' + data.error);
-      }
+      setLoading(true);
+      const userProfiles = await getUserProfiles(user.uid);
+      setProfiles(userProfiles);
     } catch (error) {
-      console.error('QR generation error:', error);
-      alert('QR oluşturma sırasında hata oluştu: ' + (error as Error).message);
+      console.error('Failed to load profiles:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createNewProfile = async () => {
+    if (!newProfileName.trim()) return;
+
+    setCreatingProfile(true);
+    try {
+      // Generate slug from displayName
+      const slug = newProfileName.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now();
+      
+      const profileData = {
+        slug,
+        type: newProfileType,
+        displayName: newProfileName,
+        bio: '',
+        isPublic: true,
+        links: [],
+        mood: {
+          mode: 'profile' as const
+        },
+        socialLinks: [],
+        showMode: 'fullProfile' as const,
+        customMessage: '',
+        customSong: ''
+      };
+
+      const newProfile = await createProfile(user!.uid, profileData);
+      if (newProfile) {
+        setProfiles([...profiles, newProfile]);
+        setNewProfileName('');
+        setNewProfileType('personal');
+      }
+    } catch (error) {
+      console.error('Failed to create profile:', error);
+      alert('Profil oluşturulamadı. Lütfen tekrar deneyin.');
+    } finally {
+      setCreatingProfile(false);
+    }
+  };
+
+  const handleDeleteProfile = async (profileId: string) => {
+    try {
+      await deleteProfile(profileId);
+      setProfiles(profiles.filter(p => p.id !== profileId));
+    } catch (error) {
+      console.error('Failed to delete profile:', error);
+      alert('Profil silinemedi. Lütfen tekrar deneyin.');
     }
   };
 
   if (authLoading) {
+    return <Loading text="Yükleniyor..." />;
+  }
+
+  if (!user) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loading size="lg" text="Profil yükleniyor..." />
+        <Loading text="Giriş yapılıyor..." />
       </div>
     );
   }
 
-  if (!user) return null;
-
-  const handleSave = async () => {
-    if (!user) return;
-    
-    setLoading(true);
-    try {
-      // Prepare updates
-      const updates: any = {
-        nickname: nickname.trim() || displayName,
-        bio: bio.trim(),
-        instagram: instagram.trim(),
-        twitter: twitter.trim(),
-        allowAnonymous,
-      };
-      
-      // Add QR mode configuration
-      let qrModeContent = '';
-      
-      if (qrMode === 'note') {
-        const validation = validateNoteContent(noteContent);
-        if (!validation.valid) {
-          alert('Not hatası: ' + validation.error);
-          return;
-        }
-        qrModeContent = JSON.stringify(noteContent);
-      } else if (qrMode === 'song') {
-        const validation = validateSongContent(songContent);
-        if (!validation.valid) {
-          alert('Şarkı hatası: ' + validation.error);
-          return;
-        }
-        qrModeContent = JSON.stringify(songContent);
-      }
-      
-      updates.qrMode = qrMode;
-      updates.qrModeContent = qrModeContent;
-      
-      // Update profile based on type
-      if (profile && 'companyName' in profile) {
-        // Business profile
-        await updateBusinessProfile(user.uid, updates);
-      } else {
-        // Personal profile
-        await updateUserProfile(user.uid, updates);
-      }
-      
-      // Update QR mode
-      const qrModeUpdated = await updateUserQRMode(user.uid, qrMode, qrModeContent);
-      if (!qrModeUpdated) {
-        alert('QR modu kaydedilemedi!');
-        return;
-      }
-      
-      alert('Profil bilgileri ve QR modu başarıyla kaydedildi!');
-      
-      // Reload page to refresh profile
-      window.location.reload();
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Profil kaydedilemedi: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-black text-white py-12 px-6">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-8 text-center">
-          Profilini Yönet
-        </h1>
-
-        {/* Profile Statistics */}
-        <div className="mb-10">
-          <ProfileStats userId={user.uid} isOwnProfile={true} />
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-10">
-          {/* Sol: Profil Formu */}
-          <div className="bg-gray-900 p-8 rounded-xl border border-purple-900">
-            <h2 className="text-2xl font-bold text-white mb-6">Bilgilerin</h2>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Gerçek Ad</label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                  placeholder="Ad Soyad"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-purple-300 mb-1">
-                  <span className="font-bold">Takma Ad (Nickname)</span>
-                  <span className="text-xs block text-gray-400 mt-1">
-                    Bu ad her yerde görünür. Boş bırakırsan gerçek adın kullanılır.
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  value={nickname}
-                  onChange={(e) => setNickname(e.target.value)}
-                  className="w-full p-3 bg-purple-900/20 border border-purple-500/50 rounded-lg text-white focus:border-purple-400 transition-colors"
-                  placeholder={displayName || 'Muta, Talha, vs...'}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Bio</label>
-                <textarea
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white h-24"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Instagram (@)</label>
-                <input
-                  type="text"
-                  value={instagram}
-                  onChange={(e) => setInstagram(e.target.value)}
-                  placeholder="kullaniciadi"
-                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">Twitter / X (@)</label>
-                <input
-                  type="text"
-                  value={twitter}
-                  onChange={(e) => setTwitter(e.target.value)}
-                  placeholder="kullaniciadi"
-                  className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white"
-                />
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="anonymous"
-                  checked={allowAnonymous}
-                  onChange={() => setAllowAnonymous(!allowAnonymous)}
-                  className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-600"
-                />
-                <label htmlFor="anonymous" className="ml-2 text-gray-300">
-                  Anonim soru al
-                </label>
-              </div>
-
-              <NeonButton
-                onClick={handleSave}
-                disabled={loading}
-                variant="primary"
-                size="lg"
-                glow
-                className="w-full"
-              >
-                {loading ? 'Kaydediliyor...' : '✨ Değişiklikleri Kaydet'}
-              </NeonButton>
-            </form>
-          </div>
-
-          {/* Sağ: QR Ayarları ve Önizleme */}
-          <div className="space-y-8">
-            {/* QR Mode Configuration */}
-            <div className="glass-effect p-6 rounded-xl cyber-border">
-              <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-                <span>📱</span>
-                QR Kod Modu
-              </h2>
-              <p className="text-gray-300 mb-4">
-                QR kodun tarandığında ne gösterileceğini seç:
-              </p>
-              
-              {qrModeLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loading size="sm" text="Yükleniyor..." />
-                </div>
-              ) : (
-                <>
-                  {/* QR Mode Selection */}
-                  <div className="grid grid-cols-3 gap-2 mb-4">
-                    {(['profile', 'note', 'song'] as QRMode[]).map((mode) => {
-                      const modeInfo = formatQRModeDisplay(mode);
-                      return (
-                        <button
-                          key={mode}
-                          onClick={() => setQrMode(mode)}
-                          className={`p-3 rounded-lg border text-center ${
-                            qrMode === mode
-                              ? 'border-purple-500 bg-purple-900/20 glow-subtle'
-                              : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                          }`}
-                        >
-                          <div className="text-2xl mb-1">{modeInfo.icon}</div>
-                          <div className="text-xs font-medium">{modeInfo.label}</div>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Mode-specific Configuration */}
-                  {qrMode === 'note' && (
-                    <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-4">
-                      <h3 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
-                        <span>📝</span>
-                        Not Ayarları
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-300 mb-1">Başlık</label>
-                          <input
-                            type="text"
-                            value={noteContent.title}
-                            onChange={(e) => setNoteContent({...noteContent, title: e.target.value})}
-                            placeholder="Başlık"
-                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            maxLength={50}
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-purple-300 mb-1">
-                            Not Metni <span className="text-red-400">*</span>
-                          </label>
-                          <textarea
-                            value={noteContent.text}
-                            onChange={(e) => setNoteContent({...noteContent, text: e.target.value})}
-                            placeholder="Mesajınız..."
-                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white h-20 text-sm"
-                            maxLength={500}
-                            required
-                          />
-                          <div className="text-xs text-gray-400 mt-1">
-                            {noteContent.text.length}/500 karakter
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {qrMode === 'song' && (
-                    <div className="bg-purple-900/10 border border-purple-500/30 rounded-lg p-4">
-                      <h3 className="font-bold text-purple-300 mb-3 flex items-center gap-2">
-                        <span>🎵</span>
-                        Şarkı Ayarları
-                      </h3>
-                      <div className="space-y-3">
-                        <div>
-                          <label className="block text-xs font-medium text-purple-300 mb-1">
-                            Şarkı URL'si <span className="text-red-400">*</span>
-                          </label>
-                          <input
-                            type="url"
-                            value={songContent.url}
-                            onChange={(e) => setSongContent({...songContent, url: e.target.value})}
-                            placeholder="Spotify/YouTube linki..."
-                            className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-300 mb-1">Şarkı</label>
-                            <input
-                              type="text"
-                              value={songContent.title}
-                              onChange={(e) => setSongContent({...songContent, title: e.target.value})}
-                              placeholder="Şarkı adı"
-                              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-300 mb-1">Sanatçı</label>
-                            <input
-                              type="text"
-                              value={songContent.artist}
-                              onChange={(e) => setSongContent({...songContent, artist: e.target.value})}
-                              placeholder="Sanatçı"
-                              className="w-full p-2 bg-gray-800 border border-gray-700 rounded text-white text-sm"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {qrMode === 'profile' && (
-                    <div className="bg-green-900/10 border border-green-500/30 rounded-lg p-4">
-                      <h3 className="font-bold text-green-300 mb-2 flex items-center gap-2">
-                        <span>👤</span>
-                        Profil Modu
-                      </h3>
-                      <p className="text-gray-300 text-xs">
-                        QR kodun tarandığında normal profil sayfan açılacak.
-                      </p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* QR Önizleme ve Oluştur Butonu */}
-            <div className="glass-effect p-6 rounded-xl cyber-border flex flex-col items-center">
-              <h2 className="text-2xl font-bold text-white mb-4">QR Önizleme</h2>
-              <div className="p-4 bg-white rounded-lg mb-4">
-                {/* Placeholder QR Code */}
-                <div className="w-32 h-32 bg-black flex items-center justify-center text-white font-bold text-xs">
-                  QR KOD
-                </div>
-              </div>
-              <div className="text-center space-y-1 mb-4">
-                <p className="text-lg font-bold text-purple-300">
-                  {getUserDisplayName(user, profile)}
-                </p>
-                <p className="text-xs text-gray-400">
-                  @{getUserUsername(user)}
-                </p>
-              </div>
-              <NeonButton
-                onClick={() => router.push('/dashboard/qr-generator')}
-                variant="primary"
-                size="sm"
-                glow
-                className="w-full"
-              >
-                📱 QR Kod Oluştur
-              </NeonButton>
-            </div>
-          </div>
-        </div>
-
-        {/* Geri Dön Butonu */}
-        <div className="text-center mt-8">
-          <NeonButton
-            onClick={() => router.push('/dashboard')}
-            variant="outline"
-            size="md"
-          >
-            ← Panele Dön
+    <div className="min-h-screen bg-black text-white p-4">
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            Profillerim
+          </h1>
+          <NeonButton onClick={() => setCreatingProfile(true)} variant="primary" glow>
+            ➕ Yeni Profil Oluştur
           </NeonButton>
         </div>
+
+        {loading ? (
+          <Loading text="Profiller yükleniyor..." />
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {profiles.map((profile) => (
+              <ProfileCard
+                key={profile.id}
+                profile={profile}
+                onDelete={handleDeleteProfile}
+                onEdit={() => router.push(`/dashboard/profile/${profile.id}/edit`)}
+                onView={() => router.push(`/p/${profile.slug}`)}
+              />
+            ))}
+            
+            {/* Add Profile Card */}
+            <div className="group relative" onClick={() => setCreatingProfile(true)}>
+              <div className="w-full h-48 bg-gradient-to-br from-gray-800 to-gray-700 border-2 border-dashed border-gray-600 rounded-xl flex flex-col items-center justify-center hover:border-purple-500 transition-all duration-200 hover:bg-gray-800/50 cursor-pointer p-4">
+                <div className="text-4xl mb-2">+</div>
+                <p className="text-gray-400 group-hover:text-white text-center">Yeni Profil</p>
+                <p className="text-xs text-gray-500 text-center mt-1">Profil ekle</p>
+              </div>
+              <div className="absolute inset-0 bg-purple-500/10 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none flex items-center justify-center">
+                <span className="text-purple-400 text-lg">➕</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Create Profile Modal */}
+        {creatingProfile && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
+              <h2 className="text-xl font-bold text-white mb-4">Yeni Profil Oluştur</h2>
+              
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Profil Türü</label>
+                <select
+                  value={newProfileType}
+                  onChange={(e) => setNewProfileType(e.target.value as any)}
+                  className="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                >
+                  <option value="personal">Kişisel</option>
+                  <option value="business">İşletme</option>
+                  <option value="car">Araba</option>
+                  <option value="tshirt">Tişört</option>
+                  <option value="pet">Evcil Hayvan</option>
+                </select>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-300 mb-2">Profil Adı</label>
+                <input
+                  type="text"
+                  value={newProfileName}
+                  onChange={(e) => setNewProfileName(e.target.value)}
+                  placeholder="Profil adı girin"
+                  className="w-full p-2 bg-gray-800 border border-gray-700 rounded-lg text-white"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <NeonButton
+                  onClick={createNewProfile}
+                  disabled={!newProfileName.trim() || creatingProfile}
+                  variant="primary"
+                  className="flex-1"
+                >
+                  {creatingProfile ? 'Oluşturuluyor...' : 'Profil Oluştur'}
+                </NeonButton>
+                <NeonButton
+                  onClick={() => setCreatingProfile(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  İptal
+                </NeonButton>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

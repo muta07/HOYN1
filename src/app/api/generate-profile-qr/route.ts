@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const qrMode = qrModeData ? qrModeData.mode : 'profile';
 
     // Prepare parameters for Python QR generator
-    const username = profile.username || profile.email.split('@')[0];
+    const username = profile.email ? profile.email.split('@')[0] : 'user';
     const profilId = profile.uid; // Use user ID as profil_id
 
     // Call Python QR generator
@@ -135,10 +135,10 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json({
-      qrGenerated: profile.qrGenerated || false,
-      qrMode: profile.qrMode || 'profile',
-      qrGeneratedAt: profile.qrGeneratedAt,
-      username: profile.username || profile.email.split('@')[0]
+      qrGenerated: false, // Default value since this property doesn't exist on UserProfile
+      qrMode: 'profile', // Default value since this property doesn't exist on UserProfile
+      qrGeneratedAt: null, // Default value since this property doesn't exist on UserProfile
+      username: profile.email ? profile.email.split('@')[0] : ''
     });
 
   } catch (error: any) {

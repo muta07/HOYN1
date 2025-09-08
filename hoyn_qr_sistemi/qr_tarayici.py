@@ -16,17 +16,25 @@ from io import BytesIO
 import os
 from urllib.parse import urlparse
 
-# Şifreleme anahtarı (qr_uretici.py ile aynı olmalı)
-ENCRYPTION_KEY = b'example_key_32_bytes_long_12345'  # Gerçekte güvenli yönetilmeli
-cipher_suite = Fernet(Fernet.generate_key())  # Demo için, aynı anahtar ile senkronize edilmeli
 from guvenlik import guvenlik_yoneticisi
-cipher_suite = guvenlik_yoneticisi.cipher_suite  # Güvenlik modülünden anahtar al
 
 # Basit veritabanı simülasyonu (gerçekte veritabani.py kullanılacak)
+# Bu fonksiyon artık kullanılmıyor, veritabani.py'deki fonksiyon kullanılacak
 PROFIL_VERITABANI = {
     "test-profile-1": {"isim": "Cumhur", "mesaj": "Hoş Geldiniz! 🎉"},
     "test-profile-2": {"isim": "Kullanıcı", "mesaj": "Profilinize Hoş Geldiniz!"}
 }
+
+def profil_var_mi(profil_id: str) -> bool:
+    """
+    Profilin veritabanında var olup olmadığını kontrol eder.
+    Girdiler: profil_id (str)
+    Çıktı: bool
+    """
+    # Gerçek uygulamada veritabani.py'deki fonksiyon kullanılacak
+    # Bu sadece test için burada bırakılmıştır
+    from veritabani import profil_var_mi as db_profil_var_mi
+    return db_profil_var_mi(profil_id)
 
 def qr_veri_coz(sifrelenmis_base64: str) -> dict:
     """
@@ -35,7 +43,6 @@ def qr_veri_coz(sifrelenmis_base64: str) -> dict:
     Çıktı: Çözülmüş payload dict veya None (hata durumunda)
     """
     try:
-        sifrelenmis = base64.b64decode(sifrelenmis_base64)
         cozulmus = guvenlik_yoneticisi.veri_coz(sifrelenmis_base64)
         if cozulmus is None:
             return None
@@ -51,16 +58,13 @@ def hash_dogrula(payload: dict) -> bool:
     Çıktı: bool (doğru mu?)
     """
     try:
-        # Hash hesapla (profil_id, sistem_kimligi, zaman_damgasi)
-        veri = json.dumps({
+        hash_verisi = {
             "profil_id": payload["profil_id"],
             "sistem_kimligi": payload["sistem_kimligi"],
             "zaman_damgasi": payload["zaman_damgasi"]
-        }).encode()
-        hash_nesnesi = hashes.Hash(hashes.SHA256())
-        hash_nesnesi.update(veri)
-        hesaplanan_hash = hash_nesnesi.finalize().hex()
-        return hesaplanan_hash == payload["hash"]
+        }
+        hesaplanan_hash = guvenlik_yoneticisi.hmac_hash_olustur(hash_verisi)
+        return guvenlik_yoneticisi.hmac_hash_dogrula(hash_verisi, payload["hash"])
     except Exception:
         return False
 
@@ -73,19 +77,11 @@ def zaman_damgasi_gecerli_mi(zaman_damgasi: int) -> bool:
     mevcut_zaman = int(time.time())
     return (mevcut_zaman - zaman_damgasi) <= 300  # 5 dakika = 300 saniye
 
-def profil_var_mi(profil_id: str) -> bool:
-    """
-    Profilin veritabanında var olup olmadığını kontrol eder.
-    Girdiler: profil_id (str)
-    Çıktı: bool
-    """
-    return profil_id in PROFIL_VERITABANI
-
 def qr_tara_ve_dogrula(qr_veri: str, user_agent: str = None, tarayici_tipi: str = "hoyn_scanner") -> dict:
     """
     QR kodunu tarar ve doğrular. Tarayıcı tipine göre işlem yapar.
     Girdiler: qr_veri (base64 QR string veya raw data), user_agent (str), tarayici_tipi (str)
-    Çıktı: dict (sonuç: 'basarili', 'uyari', 'hata'; mesaj: str; profil_bilgisi: dict)
+    Çıktı: dict (sonuc: 'basarili', 'uyari', 'hata'; mesaj: str; profil_bilgisi: dict)
     """
     # Önce veriyi çöz
     payload = qr_veri_coz(qr_veri)
@@ -104,23 +100,17 @@ def qr_tara_ve_dogrula(qr_veri: str, user_agent: str = None, tarayici_tipi: str 
             "profil_bilgisi": None
         }
     
-    # Hash doğrulama
-    if not hash_dogrula(payload):
+    # Tam doğrulama (hash + zaman damgası)
+    dogru_mu, dogru_mesaj = guvenlik_yoneticisi.tam_dogrulama_yap(payload)
+    if not dogru_mu:
         return {
             "sonuc": "hata",
-            "mesaj": "🔐 QR kodu doğrulanamadı. Lütfen yeni bir QR oluşturun.",
+            "mesaj": dogru_mesaj,
             "profil_bilgisi": None
         }
     
-    # Zaman damgası kontrolü
-    if not zaman_damgasi_gecerli_mi(payload["zaman_damgasi"]):
-        return {
-            "sonuc": "hata",
-            "mesaj": "⏰ QR kodu süresi dolmuş. Lütfen yeni bir tane oluşturun.",
-            "profil_bilgisi": None
-        }
-    
-    # Profil kontrolü
+    # Profil kontrolü (veritabanından)
+    from veritabani import profil_var_mi, profil_bilgisi_al
     profil_id = payload["profil_id"]
     if not profil_var_mi(profil_id):
         return {
@@ -138,10 +128,12 @@ def qr_tara_ve_dogrula(qr_veri: str, user_agent: str = None, tarayici_tipi: str 
         }
     
     # Başarılı: Profil bilgisini döndür
-    profil_bilgisi = PROFIL_VERITABANI[profil_id]
+    profil_bilgisi = profil_bilgisi_al(profil_id)
+    from ui_mesajlari import qr_tarama_sonucu
+    mesaj = qr_tarama_sonucu("basarili", profil_bilgisi)
     return {
         "sonuc": "basarili",
-        "mesaj": f"{profil_bilgisi['isim']} Profiline Hoş Geldiniz! 🎉",
+        "mesaj": mesaj,
         "profil_bilgisi": profil_bilgisi
     }
 
@@ -165,10 +157,13 @@ def qr_resminden_veri_cek(qr_base64: str) -> str:
 
 # Test fonksiyonu
 if __name__ == "__main__":
-    # Test QR verisi (qr_uretici.py'den)
-    from qr_uretici import sifrelenmis_veri_olustur
-    test_profil_id = "test-profile-1"
-    test_veri = sifrelenmis_veri_olustur(test_profil_id)
+    from guvenlik import sifrelenmis_qr_payload_olustur
+    from veritabani import profil_olustur
+    # Test profili oluştur
+    test_profil_id = profil_olustur("test-user", "Test Profil", "Test profili")
+    
+    # Test QR verisi oluştur
+    test_veri = sifrelenmis_qr_payload_olustur(test_profil_id)
     
     # Hoyn scanner ile test
     sonuc = qr_tara_ve_dogrula(test_veri, tarayici_tipi="hoyn_scanner")

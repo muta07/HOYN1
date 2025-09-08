@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db, UserProfile, BusinessProfile, HOYNProfile, getHOYNProfileByUsername, getUserProfiles, createHOYNProfile } from '@/lib/firebase';
+import { db, UserProfile, BusinessProfile, HOYNProfile, getHOYNProfileByUsername, getUserProfiles, createHOYNProfile, getPrimaryProfileForUser, incrementProfileViews } from '@/lib/firebase';
 import { getUserQRMode, QRModeData, NoteContent, SongContent, getEmbedUrl } from '@/lib/qr-modes';
-import { incrementProfileViews } from '@/lib/stats';
+import { formatStatNumber } from '@/lib/stats';
 import { useAuth } from '@/hooks/useAuth';
 import Loading from '@/components/ui/Loading';
 import NeonButton from '@/components/ui/NeonButton';
@@ -64,7 +64,7 @@ export default function UserProfilePage({ params }: PageProps) {
           setUserProfile(hoynProfile);
           
           // Load QR mode configuration
-          const qrModeData = await getUserQRMode(hoynProfile.uid);
+          const qrModeData = await getUserQRMode(hoynProfile.ownerUid);
           setQrMode(qrModeData);
 
           // Parse QR mode content
@@ -98,13 +98,28 @@ export default function UserProfilePage({ params }: PageProps) {
           // Load owner's other profiles if this is the owner's page
           if (currentUser && currentUser.uid === hoynProfile.ownerUid) {
             const profiles = await getUserProfiles(hoynProfile.ownerUid);
-            setOwnerProfiles(profiles);
+            // Filter to only HOYN profiles and map to the correct type
+            const hoynProfiles = profiles
+              .filter(profile => profile.type === 'personal' || profile.type === 'business')
+              .map(profile => ({
+                ...profile,
+                username: profile.slug || '',
+                displayName: profile.displayName || ''
+              } as HOYNProfile));
+            setOwnerProfiles(hoynProfiles);
           }
 
           // Increment profile views (if viewing someone else's profile)
           if (currentUser && currentUser.uid !== hoynProfile.ownerUid) {
-            incrementProfileViews(hoynProfile.ownerUid).catch(error => {
-              console.error('Failed to track profile view:', error);
+            // Get the primary profile for the user and increment its views
+            getPrimaryProfileForUser(hoynProfile.ownerUid).then(profile => {
+              if (profile) {
+                incrementProfileViews(profile.id).catch(error => {
+                  console.error('Failed to track profile view:', error);
+                });
+              }
+            }).catch(error => {
+              console.error('Failed to get primary profile:', error);
             });
           }
           
@@ -124,25 +139,17 @@ export default function UserProfilePage({ params }: PageProps) {
           
           // Create HOYNProfile from legacy user
           const profileData = {
-            username: userData.username,
+            username: username,
             type: 'personal' as const,
-            displayName: userData.displayName,
+            displayName: userData.displayName || '',
             bio: userData.bio,
-            instagram: userData.instagram,
-            twitter: userData.twitter,
-            allowAnonymous: userData.allowAnonymous,
-            profileCustomization: userData.profileCustomization,
-            nickname: userData.nickname,
-            avatar: userData.avatar,
-            email: userData.email,
-            uid: userData.uid,
+            imageUrl: userData.photoURL,
+            isPublic: true,
             createdAt: userData.createdAt || new Date(),
             updatedAt: userData.updatedAt || new Date(),
-            followersCount: userData.followersCount || 0,
-            followingCount: userData.followingCount || 0,
           };
 
-          const newProfile = await createHOYNProfile(userData.uid, profileData, true);
+          const newProfile = await createHOYNProfile(userData.uid, profileData);
           if (newProfile) {
             setUserProfile(newProfile);
             // Continue with QR mode loading...
@@ -151,7 +158,15 @@ export default function UserProfilePage({ params }: PageProps) {
             // Parse content logic same as above...
             if (currentUser && currentUser.uid === userData.uid) {
               const profiles = await getUserProfiles(userData.uid);
-              setOwnerProfiles(profiles);
+              // Filter to only HOYN profiles and map to the correct type
+              const hoynProfiles = profiles
+                .filter(profile => profile.type === 'personal' || profile.type === 'business')
+                .map(profile => ({
+                  ...profile,
+                  username: profile.slug || '',
+                  displayName: profile.displayName || ''
+                } as HOYNProfile));
+              setOwnerProfiles(hoynProfiles);
             }
             return;
           }
@@ -163,8 +178,15 @@ export default function UserProfilePage({ params }: PageProps) {
           setQrMode(qrModeData);
           // Parse content...
           if (currentUser && currentUser.uid !== userData.uid) {
-            incrementProfileViews(userData.uid).catch(error => {
-              console.error('Failed to track profile view:', error);
+            // Get the primary profile for the user and increment its views
+            getPrimaryProfileForUser(userData.uid).then(profile => {
+              if (profile) {
+                incrementProfileViews(profile.id).catch(error => {
+                  console.error('Failed to track profile view:', error);
+                });
+              }
+            }).catch(error => {
+              console.error('Failed to get primary profile:', error);
             });
           }
           return;
@@ -182,35 +204,17 @@ export default function UserProfilePage({ params }: PageProps) {
           
           // Create HOYNProfile from legacy business
           const profileData = {
-            username: businessData.username,
+            username: username,
             type: 'business' as const,
-            companyName: businessData.companyName,
-            ownerName: businessData.ownerName,
-            businessType: businessData.businessType,
-            description: businessData.description,
-            address: businessData.address,
-            phone: businessData.phone,
-            website: businessData.website,
-            sector: businessData.sector,
-            foundedYear: businessData.foundedYear,
-            employeeCount: businessData.employeeCount,
-            services: businessData.services,
-            workingHours: businessData.workingHours,
-            socialMedia: businessData.socialMedia,
-            contactInfo: businessData.contactInfo,
-            location: businessData.location,
-            businessSettings: businessData.businessSettings,
-            nickname: businessData.nickname,
-            avatar: businessData.avatar,
-            email: businessData.email,
-            uid: businessData.uid,
+            displayName: businessData.businessName || '',
+            bio: businessData.description,
+            imageUrl: businessData.imageUrl,
+            isPublic: true,
             createdAt: businessData.createdAt || new Date(),
             updatedAt: businessData.updatedAt || new Date(),
-            followersCount: businessData.followersCount || 0,
-            followingCount: businessData.followingCount || 0,
           };
 
-          const newProfile = await createHOYNProfile(businessData.uid, profileData, true);
+          const newProfile = await createHOYNProfile(businessData.ownerUid, profileData);
           if (newProfile) {
             setUserProfile(newProfile);
             // Continue with QR mode loading...
@@ -219,11 +223,18 @@ export default function UserProfilePage({ params }: PageProps) {
           
           // Fallback to legacy
           setUserProfile(businessData);
-          const qrModeData = await getUserQRMode(businessData.uid);
+          const qrModeData = await getUserQRMode(businessData.ownerUid);
           setQrMode(qrModeData);
-          if (currentUser && currentUser.uid !== businessData.uid) {
-            incrementProfileViews(businessData.uid).catch(error => {
-              console.error('Failed to track profile view:', error);
+          if (currentUser && currentUser.uid !== businessData.ownerUid) {
+            // Get the primary profile for the user and increment its views
+            getPrimaryProfileForUser(businessData.ownerUid).then(profile => {
+              if (profile) {
+                incrementProfileViews(profile.id).catch(error => {
+                  console.error('Failed to track profile view:', error);
+                });
+              }
+            }).catch(error => {
+              console.error('Failed to get primary profile:', error);
             });
           }
           return;
@@ -261,6 +272,7 @@ export default function UserProfilePage({ params }: PageProps) {
         uid: currentUser.uid,
         createdAt: new Date(),
         updatedAt: new Date(),
+        isPublic: true,
         followersCount: 0,
         followingCount: 0,
         ...(newProfileData.type === 'personal' ? {
@@ -273,7 +285,7 @@ export default function UserProfilePage({ params }: PageProps) {
         }),
       };
 
-      const newProfile = await createHOYNProfile(currentUser.uid, profileData, newProfileData.isPrimary);
+      const newProfile = await createHOYNProfile(currentUser.uid, profileData);
       if (newProfile) {
         setOwnerProfiles(prev => [...prev, newProfile]);
         setShowCreateProfile(false);
@@ -335,15 +347,18 @@ export default function UserProfilePage({ params }: PageProps) {
   }
 
   // Determine if this is the profile owner
-  const isOwner = currentUser && (currentUser.uid === userProfile.uid || ('ownerUid' in userProfile && currentUser.uid === (userProfile as HOYNProfile).ownerUid));
+  const isOwner = currentUser && (
+    ('uid' in userProfile && currentUser.uid === userProfile.uid) || 
+    ('ownerUid' in userProfile && currentUser.uid === (userProfile as HOYNProfile).ownerUid)
+  );
   
   // Get display name - handle HOYNProfile
   const displayName = 'displayName' in userProfile ? userProfile.displayName : 
-                     'companyName' in userProfile ? userProfile.companyName : 
-                     userProfile.nickname || userProfile.username;
+                     'businessName' in userProfile ? userProfile.businessName : 
+                     userProfile.nickname || ('username' in userProfile ? userProfile.username : '');
   
   // Check if this is a business profile
-  const isBusinessProfile = 'companyName' in userProfile || ('type' in userProfile && (userProfile as HOYNProfile).type === 'business');
+  const isBusinessProfile = ('type' in userProfile && (userProfile as HOYNProfile).type === 'business') || ('businessName' in userProfile);
   const businessProfile = isBusinessProfile ? userProfile as BusinessProfile : null;
   const hoynProfile = 'type' in userProfile ? userProfile as HOYNProfile : null;
   
@@ -380,13 +395,19 @@ export default function UserProfilePage({ params }: PageProps) {
               
               {/* User Info */}
               <div className="text-sm text-gray-400 mb-6">
-                <p>Bu mesaj <span className="text-purple-400 font-bold">@{userProfile.username}</span> tarafından gönderildi</p>
+                <p>Bu mesaj <span className="text-purple-400 font-bold">@{
+                  'username' in userProfile ? userProfile.username : 
+                  ('email' in userProfile ? userProfile.email?.split('@')[0] : '') || 'kullanıcı'
+                }</span> tarafından gönderildi</p>
               </div>
               
               {/* Action Buttons */}
               <div className="space-y-3">
                 <NeonButton
-                  onClick={() => router.push(`/ask/${userProfile.username}`)}
+                  onClick={() => router.push(`/ask/${
+                    'username' in userProfile ? userProfile.username : 
+                    ('email' in userProfile ? userProfile.email?.split('@')[0] : '') || 'kullanıcı'
+                  }`)}
                   variant="primary"
                   size="lg"
                   glow
@@ -519,13 +540,16 @@ export default function UserProfilePage({ params }: PageProps) {
               
               {/* User Info */}
               <div className="text-sm text-gray-400 mb-6">
-                <p>Bu şarkı <span className="text-purple-400 font-bold">@{userProfile.username}</span> tarafından paylaşıldı</p>
+                <p>Bu şarkı <span className="text-purple-400 font-bold">@{
+                  'username' in userProfile ? userProfile.username : 
+                  ('email' in userProfile ? userProfile.email?.split('@')[0] : '') || 'kullanıcı'
+                }</span> tarafından paylaşıldı</p>
               </div>
               
               {/* Action Buttons */}
               <div className="space-y-3">
                 <NeonButton
-                  onClick={() => router.push(`/ask/${userProfile.username}`)}
+                  onClick={() => router.push(`/ask/${'username' in userProfile ? userProfile.username : ('email' in userProfile ? userProfile.email?.split('@')[0] : '') || 'kullanıcı'}`)}
                   variant="secondary"
                   size="md"
                   className="w-full"
@@ -546,8 +570,8 @@ export default function UserProfilePage({ params }: PageProps) {
                   onClick={() => {
                     if (navigator.share) {
                       navigator.share({
-                        title: `${songContent.title || 'Şarkı Önerisi'} - ${songContent.artist || userProfile.username}`,
-                        text: `${userProfile.username} adlı kullanıcı sana bir şarkı öneriyor!`,
+                        title: `${songContent.title || 'Şarkı Önerisi'} - ${songContent.artist || ('username' in userProfile ? userProfile.username : '')}`,
+                        text: `${'username' in userProfile ? userProfile.username : ('email' in userProfile ? userProfile.email?.split('@')[0] : '') || 'kullanıcı'} adlı kullanıcı sana bir şarkı öneriyor!`,
                         url: window.location.href
                       }).catch(console.error);
                     } else {
@@ -704,7 +728,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 </div>
                 
                 <ThemedText size="4xl" weight="black" variant="primary" glow className="mb-4">
-                  {displayName}
+                  {displayName?.toString() || ''}
                 </ThemedText>
                 
                 {isBusinessProfile && businessProfile?.companyName !== displayName && (
@@ -889,7 +913,7 @@ export default function UserProfilePage({ params }: PageProps) {
 
               {/* Social Links & Contact */}
               {(
-                ('instagram' in userProfile && (userProfile.instagram || userProfile.twitter)) || 
+                ('instagram' in userProfile && (userProfile.socialMedia?.instagram || userProfile.socialMedia?.twitter)) || 
                 (isBusinessProfile && (
                   businessProfile?.socialMedia?.instagram || 
                   businessProfile?.socialMedia?.facebook || 
@@ -900,20 +924,20 @@ export default function UserProfilePage({ params }: PageProps) {
               ) && (
                 <div className="mb-10">
                   {/* Personal Social Media */}
-                  {'instagram' in userProfile && (userProfile.instagram || userProfile.twitter) && (
+                  {'instagram' in userProfile && (userProfile.socialMedia?.instagram || userProfile.socialMedia?.twitter) && (
                     <div className="flex justify-center gap-4 mb-4">
-                      {userProfile.instagram && (
+                      {userProfile.socialMedia?.instagram && (
                         <ThemedButton
-                          onClick={() => window.open(`https://instagram.com/${userProfile.instagram}`, '_blank')}
+                          onClick={() => window.open(`https://instagram.com/${userProfile.socialMedia!.instagram}`, '_blank')}
                           variant="secondary"
                           size="md"
                         >
                           📸 Instagram
                         </ThemedButton>
                       )}
-                      {userProfile.twitter && (
+                      {userProfile.socialMedia?.twitter && (
                         <ThemedButton
-                          onClick={() => window.open(`https://twitter.com/${userProfile.twitter}`, '_blank')}
+                          onClick={() => window.open(`https://twitter.com/${userProfile.socialMedia!.twitter}`, '_blank')}
                           variant="secondary"
                           size="md"
                         >
@@ -999,7 +1023,8 @@ export default function UserProfilePage({ params }: PageProps) {
 
               {/* Actions */}
               <div className="text-center space-y-4">
-                {('allowAnonymous' in userProfile && userProfile.allowAnonymous !== false) && (
+                {('allowAnonymous' in userProfile && userProfile.allowAnonymous !== false) || 
+                (isBusinessProfile && businessProfile?.businessSettings?.allowDirectMessages !== false) && (
                   <div>
                     <ThemedButton
                       onClick={() => router.push(`/ask/${userProfile.username}`)}
