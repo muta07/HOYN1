@@ -21,6 +21,13 @@ export const useAuth = () => {
   const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
 
   useEffect(() => {
+    // Check if Firebase is initialized
+    if (!auth) {
+      console.warn('Firebase Auth is not initialized. Cannot listen to auth state changes.');
+      setLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       
