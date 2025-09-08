@@ -3,6 +3,7 @@ import Navbar from '@/components/Navbar';
 import BottomNavigation from '@/components/BottomNavigation';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
 import { SubscriptionProvider } from '@/components/providers/SubscriptionProvider';
+import { MessagesProvider } from '@/components/providers/MessagesProvider';
 import '@/styles/globals.css';
 import FloatingProfileButton from '@/components/ui/FloatingProfileButton';
 
@@ -14,10 +15,12 @@ export default function RootLayout({
       <body className="bg-black text-white">
         <ThemeProvider>
           <SubscriptionProvider>
-            <Navbar />
-            <main className="min-h-screen pt-16 pb-20">{children}</main>
-            <BottomNavigation />
-            <FloatingProfileButton />
+            <MessagesProvider>
+              <Navbar />
+              <main className="min-h-screen pt-16 pb-20">{children}</main>
+              <BottomNavigation />
+              <FloatingProfileButton />
+            </MessagesProvider>
           </SubscriptionProvider>
         </ThemeProvider>
       </body>
