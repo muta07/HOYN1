@@ -883,8 +883,8 @@ export default function UserProfilePage({ params }: PageProps) {
                 <SocialStats 
                   userId={'uid' in userProfile ? userProfile.uid : (userProfile.ownerUid || '')}
                   username={'username' in userProfile ? userProfile.username : username}
-                  initialFollowersCount={userProfile.followersCount || 0}
-                  initialFollowingCount={userProfile.followingCount || 0}
+                  initialFollowersCount={userProfile.stats?.followers || 0}
+                  initialFollowingCount={userProfile.stats?.following || 0}
                   variant="inline"
                   className="justify-center"
                   clickable={true}
