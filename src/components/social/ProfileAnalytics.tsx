@@ -29,6 +29,13 @@ export default function ProfileAnalytics({
   useEffect(() => {
     if (!profileId) return;
 
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot load profile analytics.');
+      setLoading(false);
+      return;
+    }
+
     // Set up real-time listener for profile stats
     const profileRef = doc(db, 'profiles', profileId);
     const unsubscribe = onSnapshot(profileRef, (doc) => {
