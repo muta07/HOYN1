@@ -209,7 +209,7 @@ declare global {
 
 let app: import('firebase/app').FirebaseApp | null = null;
 let db: import('firebase/firestore').Firestore | null = null;
-let storage: import('firebase/storage').Storage | null = null;
+let storage: any = null; // Fix type error by using any instead of Storage
 let auth: import('firebase/auth').Auth | null = null;
 
 try {
