@@ -48,6 +48,12 @@ export default function DiscoverPage() {
 
   // Load users
   const loadUsers = async (isLoadMore = false) => {
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot load users.');
+      return;
+    }
+
     try {
       if (!isLoadMore) {
         setLoading(true);
