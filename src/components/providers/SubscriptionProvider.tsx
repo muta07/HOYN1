@@ -32,7 +32,13 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Load user subscription
   const loadSubscription = async () => {
     if (!user) {
-      setSubscription(null);
+      setLoading(false);
+      return;
+    }
+
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot load subscription.');
       setLoading(false);
       return;
     }
@@ -86,6 +92,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const subscribeToPlan = async (planId: string): Promise<boolean> => {
     if (!user) return false;
 
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot subscribe to plan.');
+      return false;
+    }
+
     try {
       const subscriptionRef = doc(db, 'subscriptions', user.uid);
       const newSubscription: UserSubscription = {
@@ -114,6 +126,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Cancel subscription
   const cancelSubscription = async (): Promise<boolean> => {
     if (!user || !subscription) return false;
+
+    // Check if Firebase is initialized
+    if (!db) {
+      console.warn('Firebase is not initialized. Cannot cancel subscription.');
+      return false;
+    }
 
     try {
       const subscriptionRef = doc(db, 'subscriptions', user.uid);
