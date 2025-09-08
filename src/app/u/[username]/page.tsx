@@ -128,6 +128,13 @@ export default function UserProfilePage({ params }: PageProps) {
 
         // Fallback: try legacy collections for backward compatibility
         // First, try to find user in 'users' collection
+        // Check if Firebase is initialized
+        if (!db) {
+          console.warn('Firebase is not initialized. Cannot load user profile.');
+          setError('Firebase başlatılmadı');
+          return;
+        }
+
         const usersRef = collection(db, 'users');
         const userQuery = query(usersRef, where('username', '==', username));
         const userQuerySnapshot = await getDocs(userQuery);
