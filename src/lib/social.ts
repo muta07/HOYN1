@@ -231,6 +231,12 @@ export async function getFollowing(userId: string): Promise<FollowRelation[]> {
 
 // Get social stats for a user
 export async function getSocialStats(userId: string): Promise<SocialStats> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning default social stats.');
+    return { followersCount: 0, followingCount: 0 };
+  }
+
   try {
     const userRef = doc(db, 'users', userId);
     const userDoc = await getDoc(userRef);
@@ -252,6 +258,12 @@ export async function getSocialStats(userId: string): Promise<SocialStats> {
 
 // Add activity to feed
 export async function addActivity(activity: Omit<ActivityItem, 'id'>): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot add activity.');
+    return false;
+  }
+
   try {
     const activitiesRef = collection(db, 'activities');
     await addDoc(activitiesRef, {
@@ -270,6 +282,12 @@ export async function getActivityFeed(
   userId: string, 
   limit: number = 20
 ): Promise<ActivityItem[]> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning empty activity feed.');
+    return [];
+  }
+
   try {
     // First get list of users the current user follows
     const following = await getFollowing(userId);
@@ -312,6 +330,12 @@ export async function getSuggestedUsers(
   currentUserId: string,
   limit: number = 10
 ): Promise<any[]> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning empty suggestions.');
+    return [];
+  }
+
   try {
     // Get users that current user is NOT following
     const following = await getFollowing(currentUserId);
