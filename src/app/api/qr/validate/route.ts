@@ -4,6 +4,14 @@ import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 export async function POST(request: NextRequest) {
+  // Check if Firebase is initialized
+  if (!db) {
+    return NextResponse.json(
+      { error: 'Firebase is not initialized' }, 
+      { status: 500 }
+    );
+  }
+  
   try {
     const { qrId } = await request.json();
 
