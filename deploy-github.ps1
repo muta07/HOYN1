@@ -33,4 +33,4 @@ git push -u origin --all
 git push -u origin --tags
 
 Write-Host "✅ Deployment completed!"
-Write-Host "Your repository is now available at: https://github.com/$github_username/$repo_name"
+Write-Host "Your repository is now available at: https://github.com/$github_username/$repo_name""
