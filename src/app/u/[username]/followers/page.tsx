@@ -36,6 +36,13 @@ export default function FollowersPage({ params, searchParams }: PageProps) {
   // Load target user info and followers/following
   useEffect(() => {
     const loadData = async () => {
+      // Check if Firebase is initialized
+      if (!db) {
+        console.warn('Firebase is not initialized. Cannot load user data.');
+        router.push('/discover');
+        return;
+      }
+
       try {
         setLoading(true);
 
