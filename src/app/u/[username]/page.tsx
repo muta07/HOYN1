@@ -738,7 +738,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 )}
                 
                 <ThemedText size="xl" variant="muted" className="mb-2">
-                  @{userProfile.username}
+                  @{'username' in userProfile ? userProfile.username : 'N/A'}
                 </ThemedText>
                 
                 {/* Profile Type Badge */}
@@ -882,7 +882,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 {/* Social Stats */}
                 <SocialStats 
                   userId={userProfile.uid || (hoynProfile?.ownerUid || '')}
-                  username={userProfile.username}
+                  username={'username' in userProfile ? userProfile.username : username}
                   initialFollowersCount={userProfile.followersCount || 0}
                   initialFollowingCount={userProfile.followingCount || 0}
                   variant="inline"
@@ -895,7 +895,7 @@ export default function UserProfilePage({ params }: PageProps) {
                   <div className="flex justify-center">
                     <FollowButton
                       targetUserId={userProfile.uid || (hoynProfile?.ownerUid || '')}
-                      targetUsername={userProfile.username}
+                      targetUsername={'username' in userProfile ? userProfile.username : username}
                       targetDisplayName={displayName}
                       className="min-w-[200px]"
                     />
@@ -1027,7 +1027,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 (isBusinessProfile && businessProfile?.businessSettings?.allowDirectMessages !== false) && (
                   <div>
                     <ThemedButton
-                      onClick={() => router.push(`/ask/${userProfile.username}`)}
+                      onClick={() => router.push(`/ask/${'username' in userProfile ? userProfile.username : username}`)}
                       variant="primary"
                       size="lg"
                       glow
