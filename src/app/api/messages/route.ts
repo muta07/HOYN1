@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUserMessages, getUserConversations, getUserSettings, getUserDisplayName } from '@/lib/firebase';
+import { getUserMessages, getUserConversations, getUserSettings, getUserDisplayName, markMessageAsRead } from '@/lib/firebase';
 
 export async function GET(request: NextRequest) {
   try {
@@ -136,11 +136,18 @@ async function getConversationMessages(userId: string, conversationId: string, l
       return NextResponse.json({ error: 'Conversation not found or access denied' }, { status: 403 });
     }
 
-    // Get all messages for this conversation
+    // Get all messages for this conversation using proper subcollection query
     const allMessages = await getUserMessages(userId);
+    // Filter messages that belong to this conversation
+    // Assuming getUserMessages returns all user messages with conversation context
+    // For proper implementation, we should query the specific conversation subcollection
     const conversationMessages = allMessages.filter(msg => {
-      // For now, filter by sender/recipient - would need to be updated for conversation structure
-      return msg.senderId === conversationId || msg.recipientId === conversationId;
+      // Enhanced filter: check if message belongs to this conversation
+      // This assumes messages have a conversationId field or can be matched by participants
+      const msgParticipants = [msg.senderId, msg.recipientId].filter(id => id !== null);
+      const convParticipants = conversation.participants;
+      return msgParticipants.every(id => convParticipants.includes(id)) &&
+             convParticipants.every(id => msgParticipants.includes(id) || id === userId);
     });
 
     // Sort messages by timestamp (newest first)
@@ -148,9 +155,10 @@ async function getConversationMessages(userId: string, conversationId: string, l
       .sort((a, b) => (b.timestamp as any).toDate().getTime() - (a.timestamp as any).toDate().getTime())
       .slice((page - 1) * limit, page * limit);
 
-    // Mark messages as read for this user
-    // This would be implemented with markMessageAsRead function
-    // await markMessageAsRead(conversationId, '', userId);
+    // Mark messages as read for this user in the conversation
+    if (typeof markMessageAsRead === 'function') {
+      await markMessageAsRead(conversationId, '', userId);
+    }
 
     // Get conversation details
     let displayName = '';
