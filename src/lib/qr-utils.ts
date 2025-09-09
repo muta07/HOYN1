@@ -47,18 +47,26 @@ export function getUserUsername(user: User | null): string {
 /**
  * Creates user profile in Firestore
  */
-export async function createUserProfile(user: User, displayName: string, nickname?: string): Promise<any> {
+export async function createUserProfile(
+  user: User, 
+  displayName: string, 
+  nickname?: string
+): Promise<UserProfile> {
   const username = getUserUsername(user);
   const profile = {
     uid: user.uid,
     email: user.email!,
     displayName: displayName.trim(),
+    username: username,
     nickname: nickname?.trim() || displayName.trim(),
     createdAt: new Date(),
     updatedAt: new Date()
   };
   
-  await setDoc(doc(db, 'users', user.uid), profile);
+  // Check if Firebase is initialized
+  if (db) {
+    await setDoc(doc(db, 'users', user.uid), profile);
+  }
   return profile;
 }
 
@@ -66,6 +74,12 @@ export async function createUserProfile(user: User, displayName: string, nicknam
  * Gets user profile from Firestore
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning null user profile.');
+    return null;
+  }
+
   try {
     const docRef = doc(db, 'users', uid);
     const docSnap = await getDoc(docRef);
@@ -115,7 +129,10 @@ export async function createBusinessProfile(
     isVerified: false
   };
   
-  await setDoc(doc(db, 'businesses', user.uid), profile);
+  // Check if Firebase is initialized
+  if (db) {
+    await setDoc(doc(db, 'businesses', user.uid), profile);
+  }
   return profile;
 }
 
@@ -123,6 +140,12 @@ export async function createBusinessProfile(
  * Gets business profile from Firestore
  */
 export async function getBusinessProfile(uid: string): Promise<BusinessProfile | null> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning null business profile.');
+    return null;
+  }
+
   try {
     const docRef = doc(db, 'businesses', uid);
     const docSnap = await getDoc(docRef);
@@ -146,6 +169,12 @@ export async function getBusinessProfile(uid: string): Promise<BusinessProfile |
  * Updates business profile
  */
 export async function updateBusinessProfile(uid: string, updates: Partial<BusinessProfile>): Promise<void> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot update business profile.');
+    return;
+  }
+
   try {
     const docRef = doc(db, 'businesses', uid);
     await updateDoc(docRef, {
@@ -162,6 +191,12 @@ export async function updateBusinessProfile(uid: string, updates: Partial<Busine
  * Updates user profile
  */
 export async function updateUserProfile(uid: string, updates: Partial<UserProfile>): Promise<void> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot update user profile.');
+    return;
+  }
+
   try {
     const docRef = doc(db, 'users', uid);
     await updateDoc(docRef, {

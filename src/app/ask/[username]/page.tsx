@@ -25,19 +25,19 @@ export default function AskPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if Firebase is initialized
-    if (!db) {
-      setError('Mesajlaşma sistemi şu anda kullanılamıyor. Lütfen daha sonra tekrar deneyin.');
-      return;
-    }
-    
     if (!message.trim()) {
-      setError('Mesaj boş olamaz!');
+      setError('Lütfen bir mesaj yazın');
       return;
     }
     
     if (message.length > maxLength) {
-      setError(`Mesaj en fazla ${maxLength} karakter olabilir!`);
+      setError('Mesaj çok uzun. Lütfen kısaltın.');
+      return;
+    }
+    
+    // Check if Firebase is initialized
+    if (!db) {
+      setError('Firebase başlatılmadı. Lütfen daha sonra tekrar deneyin.');
       return;
     }
     

@@ -46,13 +46,18 @@ export interface ActivityItem {
 
 // Follow a user
 export async function followUser(
-  currentUserId: string, 
+  currentUserId: string,
+  targetUserId: string,
   currentUsername: string,
-  targetUserId: string, 
   targetUsername: string
 ): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot follow user.');
+    return false;
+  }
+
   try {
-    // Check if already following
     const isAlreadyFollowing = await isFollowing(currentUserId, targetUserId);
     if (isAlreadyFollowing) {
       throw new Error('Already following this user');
@@ -110,6 +115,12 @@ export async function unfollowUser(
   currentUserId: string,
   targetUserId: string
 ): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot unfollow user.');
+    return false;
+  }
+
   try {
     // Find the follow relation
     const followsRef = collection(db, 'follows');
@@ -157,6 +168,12 @@ export async function isFollowing(
   currentUserId: string,
   targetUserId: string
 ): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot check follow status.');
+    return false;
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(
@@ -175,6 +192,12 @@ export async function isFollowing(
 
 // Get user's followers
 export async function getFollowers(userId: string): Promise<FollowRelation[]> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning empty followers array.');
+    return [];
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(
@@ -203,6 +226,12 @@ export async function getFollowers(userId: string): Promise<FollowRelation[]> {
 
 // Get users that user is following
 export async function getFollowing(userId: string): Promise<FollowRelation[]> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning empty following array.');
+    return [];
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(
