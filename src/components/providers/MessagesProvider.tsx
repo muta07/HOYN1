@@ -18,13 +18,9 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
 
   useEffect(() => {
-    if (!user?.uid) {
-      setTotalUnread(0);
-      setHasUnreadMessages(false);
-      return;
-    }
+    if (!user?.uid) return;
 
-    let unsubscribe: (() => void) | null = null;
+    let unsubscribe: (() => void) | { unsubscribe: () => void } | null = null;
 
     const loadUnreadCount = async () => {
       try {
@@ -45,7 +41,7 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
     loadUnreadCount();
 
     // Set up real-time listener for conversations
-    unsubscribe = onConversationsSnapshot(user.uid, (conversations) => {
+    const unsub = onConversationsSnapshot(user.uid, (conversations) => {
       const unreadCount = conversations.reduce((sum, conv) => {
         return sum + (conv.unreadCounts?.[user.uid] || 0);
       }, 0);
@@ -54,8 +50,20 @@ export function MessagesProvider({ children }: { children: ReactNode }) {
       setHasUnreadMessages(unreadCount > 0);
     });
 
+    // Handle unsubscribe function
+    unsubscribe = unsub as unknown as (() => void) | { unsubscribe: () => void } | null;
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        } else if (typeof unsubscribe === 'object' && unsubscribe !== null && 'unsubscribe' in unsubscribe) {
+          const unsubObj = unsubscribe as { unsubscribe: () => void };
+          if (typeof unsubObj.unsubscribe === 'function') {
+            unsubObj.unsubscribe();
+          }
+        }
+      }
     };
   }, [user?.uid]);
 
