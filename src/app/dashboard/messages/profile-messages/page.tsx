@@ -80,7 +80,7 @@ export default function ProfileMessagesPage() {
       if (unsubscribe) {
         if (typeof unsubscribe === 'function') {
           unsubscribe();
-        } else if (unsubscribe.unsubscribe) {
+        } else if ('unsubscribe' in unsubscribe) {
           unsubscribe.unsubscribe();
         }
       }
