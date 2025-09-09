@@ -80,8 +80,11 @@ export default function ProfileMessagesPage() {
       if (unsubscribe) {
         if (typeof unsubscribe === 'function') {
           unsubscribe();
-        } else if ('unsubscribe' in unsubscribe && typeof unsubscribe.unsubscribe === 'function') {
-          unsubscribe.unsubscribe();
+        } else if (typeof unsubscribe === 'object' && unsubscribe !== null && 'unsubscribe' in unsubscribe) {
+          const unsub = unsubscribe as { unsubscribe: () => void };
+          if (typeof unsub.unsubscribe === 'function') {
+            unsub.unsubscribe();
+          }
         }
       }
     };
