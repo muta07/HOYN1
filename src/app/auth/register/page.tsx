@@ -33,7 +33,7 @@ export default function RegisterPage() {
         <AnimatedCard direction="scale" delay={0}>
           <div className="text-center mb-8">
             <h1 className="text-5xl font-black glow-text font-orbitron mb-4 float
-                           bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                           bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
               HOYN!
             </h1>
             <p className="text-xl text-gray-300 mb-2">
@@ -95,13 +95,13 @@ export default function RegisterPage() {
                     QR menü, çalışan kartları, müşteri etkileşimi ve işletme yönetimi
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    <span className="text-xs bg-pink-600/20 text-pink-300 px-2 py-1 rounded">
+                    <span className="text-xs bg-purple-600/20 text-purple-300 px-2 py-1 rounded">
                       QR Menü
                     </span>
-                    <span className="text-xs bg-pink-600/20 text-pink-300 px-2 py-1 rounded">
+                    <span className="text-xs bg-purple-600/20 text-purple-300 px-2 py-1 rounded">
                       Çalışan Kartları
                     </span>
-                    <span className="text-xs bg-pink-600/20 text-pink-300 px-2 py-1 rounded">
+                    <span className="text-xs bg-purple-600/20 text-purple-300 px-2 py-1 rounded">
                       İstatistikler
                     </span>
                   </div>

@@ -28,6 +28,8 @@ export default function ProfileStats({
   const [followersCount, setFollowersCount] = useState(initialFollowersCount);
   const [followingCount, setFollowingCount] = useState(initialFollowingCount);
   const [loading, setLoading] = useState(true);
+  const [unsubscribeFollowers, setUnsubscribeFollowers] = useState<(() => void) | null>(null);
+  const [unsubscribeFollowing, setUnsubscribeFollowing] = useState<(() => void) | null>(null);
 
   // Load initial stats and set up real-time listeners
   useEffect(() => {
@@ -52,17 +54,36 @@ export default function ProfileStats({
     loadInitialStats();
 
     // Set up real-time listeners
-    const unsubscribeFollowers = onProfileFollowersSnapshot(profileId, (followers) => {
+    const unsubFollowers = onProfileFollowersSnapshot(profileId, (followers) => {
       setFollowersCount(followers.length);
     });
 
-    const unsubscribeFollowing = onProfileFollowingSnapshot(profileId, (following) => {
+    const unsubFollowing = onProfileFollowingSnapshot(profileId, (following) => {
       setFollowingCount(following.length);
     });
 
+    // Handle unsubscribe functions properly
+    if (typeof unsubFollowers === 'function') {
+      setUnsubscribeFollowers(() => unsubFollowers);
+    } else if (unsubFollowers && typeof (unsubFollowers as any).unsubscribe === 'function') {
+      setUnsubscribeFollowers(() => () => (unsubFollowers as any).unsubscribe());
+    }
+
+    if (typeof unsubFollowing === 'function') {
+      setUnsubscribeFollowing(() => unsubFollowing);
+    } else if (unsubFollowing && typeof (unsubFollowing as any).unsubscribe === 'function') {
+      setUnsubscribeFollowing(() => () => (unsubFollowing as any).unsubscribe());
+    }
+
     return () => {
-      unsubscribeFollowers();
-      unsubscribeFollowing();
+      if (unsubscribeFollowers) {
+        unsubscribeFollowers();
+        setUnsubscribeFollowers(null);
+      }
+      if (unsubscribeFollowing) {
+        unsubscribeFollowing();
+        setUnsubscribeFollowing(null);
+      }
     };
   }, [profileId]);
 

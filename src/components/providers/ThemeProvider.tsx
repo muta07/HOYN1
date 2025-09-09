@@ -35,7 +35,7 @@ interface ThemeContextType {
 
 const defaultCustomization: ProfileCustomization = {
   theme: 'cyberpunk',
-  primaryColor: '#E040FB',
+  primaryColor: '#9C27B0',
   secondaryColor: '#651FFF',
   backgroundColor: '#000000',
   textColor: '#FFFFFF',
@@ -53,7 +53,12 @@ const defaultCustomization: ProfileCustomization = {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [customization, setCustomization] = useState<ProfileCustomization | null>(null);
+  const [customization, setCustomization] = useState<ProfileCustomization | null>(defaultCustomization);
+
+  useEffect(() => {
+    // Set default theme on initial load
+    setCustomization(defaultCustomization);
+  }, []);
 
   const getThemeStyles = (): React.CSSProperties => {
     if (!customization) return {};

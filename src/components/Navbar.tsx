@@ -28,12 +28,12 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="fixed top-0 w-full z-50 glass-effect border-b border-purple-900/50">
+    <nav className="fixed top-0 w-full z-50 glass-effect border-b border-purple-900/30">
       <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
         <div
           onClick={handleLogoClick}
           className="text-2xl font-black glow-text cursor-pointer font-orbitron float
-                     bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent"
+                     bg-gradient-to-r from-purple-500 to-purple-700 bg-clip-text text-transparent"
         >
           HOYN!
         </div>

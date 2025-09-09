@@ -18,6 +18,7 @@ interface ProfileFollowListProps {
 export default function ProfileFollowList({ profileId, type, onClose }: ProfileFollowListProps) {
   const [items, setItems] = useState<{id: string, profile?: Profile, followedAt: Date}[]>([]);
   const [loading, setLoading] = useState(true);
+  const [unsubscribe, setUnsubscribe] = useState<(() => void) | null>(null);
 
   useEffect(() => {
     if (!profileId) return;
@@ -28,7 +29,7 @@ export default function ProfileFollowList({ profileId, type, onClose }: ProfileF
         
         if (type === 'followers') {
           // Load followers
-          const unsubscribe = onProfileFollowersSnapshot(profileId, async (followers) => {
+          const unsub = onProfileFollowersSnapshot(profileId, async (followers) => {
             // Get profile data for each follower
             const followerProfiles = await Promise.all(
               followers.map(async (follower) => {
@@ -53,10 +54,15 @@ export default function ProfileFollowList({ profileId, type, onClose }: ProfileF
             setLoading(false);
           });
           
-          return () => unsubscribe();
+          // Handle unsubscribe properly
+          if (typeof unsub === 'function') {
+            setUnsubscribe(() => unsub);
+          } else if (unsub && typeof (unsub as any).unsubscribe === 'function') {
+            setUnsubscribe(() => () => (unsub as any).unsubscribe());
+          }
         } else {
           // Load following
-          const unsubscribe = onProfileFollowingSnapshot(profileId, async (following) => {
+          const unsub = onProfileFollowingSnapshot(profileId, async (following) => {
             // Get profile data for each following
             const followingProfiles = await Promise.all(
               following.map(async (follow) => {
@@ -81,7 +87,12 @@ export default function ProfileFollowList({ profileId, type, onClose }: ProfileF
             setLoading(false);
           });
           
-          return () => unsubscribe();
+          // Handle unsubscribe properly
+          if (typeof unsub === 'function') {
+            setUnsubscribe(() => unsub);
+          } else if (unsub && typeof (unsub as any).unsubscribe === 'function') {
+            setUnsubscribe(() => () => (unsub as any).unsubscribe());
+          }
         }
       } catch (error) {
         console.error('Error loading follow data:', error);
@@ -89,13 +100,16 @@ export default function ProfileFollowList({ profileId, type, onClose }: ProfileF
       }
     };
 
-    const unsubscribe = loadFollowData();
+    loadFollowData();
+
+    // Cleanup function
     return () => {
-      if (unsubscribe instanceof Function) {
+      if (unsubscribe) {
         unsubscribe();
+        setUnsubscribe(null);
       }
     };
-  }, [profileId, type]);
+  }, [profileId, type, unsubscribe]);
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 md:items-center p-4">

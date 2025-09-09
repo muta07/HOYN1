@@ -146,8 +146,18 @@ async function getConversationMessages(userId: string, conversationId: string, l
       // This assumes messages have a conversationId field or can be matched by participants
       const msgParticipants = [msg.senderId, msg.recipientId].filter(id => id !== null);
       const convParticipants = conversation.participants;
-      return msgParticipants.every(id => convParticipants.includes(id)) &&
-             convParticipants.every(id => msgParticipants.includes(id) || id === userId);
+      
+      // Check if all message participants are in conversation participants
+      const allMsgParticipantsInConv = msgParticipants.every(id => 
+        id && convParticipants.includes(id as string)
+      );
+      
+      // Check if all conversation participants are in message participants (or is the current user)
+      const allConvParticipantsInMsg = convParticipants.every(id => 
+        msgParticipants.includes(id) || id === userId
+      );
+      
+      return allMsgParticipantsInConv && allConvParticipantsInMsg;
     });
 
     // Sort messages by timestamp (newest first)

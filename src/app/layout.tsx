@@ -12,7 +12,7 @@ export default function RootLayout({
 }: { children: React.ReactNode }) {
   return (
     <html lang="tr">
-      <body className="bg-black text-white">
+      <body className="bg-black text-white font-orbitron">
         <ThemeProvider>
           <SubscriptionProvider>
             <MessagesProvider>

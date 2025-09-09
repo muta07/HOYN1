@@ -375,36 +375,7 @@ export async function getProfileById(profileId: string): Promise<Profile | null>
   }
 }
 
-export async function getProfileBySlug(slug: string): Promise<Profile | null> {
-  // Check if Firebase is initialized
-  if (!isFirebaseInitialized()) {
-    console.warn('Firebase is not initialized. Returning null profile.');
-    return null;
-  }
 
-  // Additional null check for db
-  if (!db) {
-    console.warn('Firestore database is not available. Returning null profile.');
-    return null;
-  }
-  
-  try {
-    const profilesRef = collection(db, 'profiles');
-    const q = query(profilesRef, where('slug', '==', slug));
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.empty) return null;
-    
-    const docSnapshot = snapshot.docs[0];
-    return { 
-      id: docSnapshot.id, 
-      ...docSnapshot.data() as Omit<Profile, 'id'> 
-    } as Profile;
-  } catch (error) {
-    console.error('Failed to get profile by slug:', error);
-    return null;
-  }
-}
 
 export async function updateProfile(
   profileId: string, 
@@ -1478,31 +1449,7 @@ export function onProfileFollowingSnapshot(
   );
 }
 
-// Export missing functions referenced in other files
-export async function getHOYNProfileByUsername(username: string): Promise<HOYNProfile | null> {
-  // Additional null check for db
-  if (!db) {
-    console.warn('Firestore database is not available. Returning null HOYN profile.');
-    return null;
-  }
 
-  try {
-    const profilesRef = collection(db, 'profiles');
-    const q = query(profilesRef, where('username', '==', username));
-    const snapshot = await getDocs(q);
-    
-    if (snapshot.empty) return null;
-    
-    const docSnapshot = snapshot.docs[0];
-    return { 
-      id: docSnapshot.id, 
-      ...docSnapshot.data() as Omit<HOYNProfile, 'id'> 
-    } as HOYNProfile;
-  } catch (error) {
-    console.error('Failed to get HOYN profile by username:', error);
-    return null;
-  }
-}
 
 export async function createHOYNProfile(
   ownerUid: string,
@@ -1531,6 +1478,37 @@ export async function createHOYNProfile(
     return fullProfile;
   } catch (error) {
     console.error('Failed to create HOYN profile:', error);
+    return null;
+  }
+}
+
+// Add the missing getProfileBySlug function
+export async function getProfileBySlug(slug: string): Promise<Profile | null> {
+  // Check if Firebase is initialized
+  if (!isFirebaseInitialized()) {
+    console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning null profile.');
+    return null;
+  }
+  
+  try {
+    const profilesRef = collection(db, 'profiles');
+    const q = query(profilesRef, where('slug', '==', slug));
+    const snapshot = await getDocs(q);
+    
+    if (!snapshot.empty) {
+      const doc = snapshot.docs[0];
+      return { id: doc.id, ...doc.data() } as Profile;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Failed to get profile by slug:', error);
     return null;
   }
 }

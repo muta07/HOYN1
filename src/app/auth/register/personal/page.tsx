@@ -40,7 +40,7 @@ export default function PersonalRegisterPage() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <form onSubmit={handleSubmit} className="max-w-md w-full">
-        <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-6 text-center">
+        <h1 className="text-3xl font-black bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent font-orbitron mb-6 text-center">
           HOYN!
         </h1>
         <p className="text-gray-300 mb-6 text-center">Bilgilerini gir</p>
@@ -90,7 +90,7 @@ export default function PersonalRegisterPage() {
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-gradient-to-r from-purple-600 to-pink-600 py-3 rounded-lg font-bold disabled:opacity-70"
+          className="w-full bg-gradient-to-r from-purple-600 to-purple-800 py-3 rounded-lg font-bold disabled:opacity-70 hover:from-purple-500 hover:to-purple-700 transition-all duration-300 active:scale-95"
         >
           {loading ? 'Oluşturuluyor...' : 'Hesap Oluştur'}
         </button>

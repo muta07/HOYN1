@@ -53,12 +53,22 @@ export async function createUserProfile(
   nickname?: string
 ): Promise<UserProfile> {
   const username = getUserUsername(user);
-  const profile = {
-    uid: user.uid,
+  const profile: any = {
+    id: user.uid,
+    ownerUid: user.uid,
     email: user.email!,
     displayName: displayName.trim(),
-    username: username,
     nickname: nickname?.trim() || displayName.trim(),
+    slug: username,
+    type: 'personal',
+    isPublic: true,
+    stats: {
+      views: 0,
+      scans: 0,
+      messages: 0,
+      followers: 0,
+      clicks: 0
+    },
     createdAt: new Date(),
     updatedAt: new Date()
   };
@@ -67,7 +77,7 @@ export async function createUserProfile(
   if (db) {
     await setDoc(doc(db, 'users', user.uid), profile);
   }
-  return profile;
+  return profile as UserProfile;
 }
 
 /**

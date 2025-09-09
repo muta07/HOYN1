@@ -55,7 +55,7 @@ function LoginForm() {
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="max-w-md w-full glass-effect p-8 rounded-xl cyber-border">
         <h1 className="text-4xl font-black glow-text font-orbitron mb-6 text-center
-                       bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                       bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
           HOYN!
         </h1>
         <p className="text-gray-300 mb-6 text-center">Hesabına giriş yap</p>

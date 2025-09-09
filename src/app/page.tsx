@@ -29,10 +29,10 @@ export default function Home() {
         <div className="text-center mb-16">
           <div className="mb-8">
             <h1 className="text-8xl font-black glow-text font-orbitron mb-4 float
-                           bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent">
+                           bg-gradient-to-r from-purple-400 via-purple-500 to-purple-600 bg-clip-text text-transparent">
               HOYN!
             </h1>
-            <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-pink-500 mx-auto rounded-full glow-intense" />
+            <div className="w-32 h-1 bg-gradient-to-r from-purple-500 to-purple-700 mx-auto rounded-full glow-intense" />
           </div>
           
           <p className="text-2xl text-gray-300 mb-4 max-w-3xl mx-auto font-light">

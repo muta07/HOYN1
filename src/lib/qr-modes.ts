@@ -32,6 +32,12 @@ const QR_MODES_COLLECTION = 'qr_modes';
  */
 export async function getUserQRMode(userId: string): Promise<QRModeData | null> {
   try {
+    // Check if db is initialized
+    if (!db) {
+      console.error('Firestore is not initialized');
+      return null;
+    }
+    
     const modeRef = doc(db, QR_MODES_COLLECTION, userId);
     const modeSnap = await getDoc(modeRef);
     
@@ -64,6 +70,12 @@ export async function updateUserQRMode(
   content: string
 ): Promise<boolean> {
   try {
+    // Check if db is initialized
+    if (!db) {
+      console.error('Firestore is not initialized');
+      return false;
+    }
+    
     const modeRef = doc(db, QR_MODES_COLLECTION, userId);
     
     const modeData: QRModeData = {

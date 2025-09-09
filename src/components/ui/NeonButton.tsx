@@ -47,8 +47,8 @@ export default function NeonButton({
 
   const variantClasses = {
     primary: `
-      bg-gradient-to-r from-purple-600 to-pink-600 
-      hover:from-purple-500 hover:to-pink-500
+      bg-gradient-to-r from-purple-600 to-purple-800 
+      hover:from-purple-500 hover:to-purple-700
       text-white rounded-lg
       shadow-lg hover:shadow-purple-500/25
       ${glow ? 'glow-intense' : ''}
@@ -62,7 +62,7 @@ export default function NeonButton({
     outline: `
       bg-transparent cyber-border
       text-purple-300 hover:text-white
-      hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-pink-600/20
+      hover:bg-gradient-to-r hover:from-purple-600/20 hover:to-purple-800/20
       rounded-lg
     `
   };

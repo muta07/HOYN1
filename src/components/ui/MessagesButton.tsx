@@ -11,6 +11,7 @@ export default function MessagesButton() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [unsubscribe, setUnsubscribe] = useState<(() => void) | null>(null);
 
   // Subscribe to unread messages count
   useEffect(() => {
@@ -22,7 +23,7 @@ export default function MessagesButton() {
     setLoading(true);
     
     // Set up real-time listener for conversations
-    const unsubscribe = onConversationsSnapshot(user.uid, (conversations) => {
+    const unsub = onConversationsSnapshot(user.uid, (conversations) => {
       const unreadCount = conversations.reduce((sum, conv) => {
         return sum + (conv.unreadCounts?.[user.uid] || 0);
       }, 0);
@@ -31,10 +32,20 @@ export default function MessagesButton() {
       setLoading(false);
     });
 
+    // Handle unsubscribe function properly
+    if (typeof unsub === 'function') {
+      setUnsubscribe(() => unsub);
+    } else if (unsub && typeof (unsub as any).unsubscribe === 'function') {
+      setUnsubscribe(() => () => (unsub as any).unsubscribe());
+    }
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        unsubscribe();
+        setUnsubscribe(null);
+      }
     };
-  }, [user?.uid]);
+  }, [user?.uid, unsubscribe]);
 
   // Don't show if user is not authenticated
   if (!user) return null;

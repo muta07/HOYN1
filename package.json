@@ -10,11 +10,13 @@
     "export": "next export"
   },
   "dependencies": {
+    "@speckle/viewer": "^2.25.9",
     "@types/dompurify": "^3.0.5",
     "@types/firebase": "^2.4.32",
     "@yudiel/react-qr-scanner": "^2.3.1",
     "date-fns": "^4.1.0",
     "firebase": "^10.14.1",
+    "firebase-admin": "^13.5.0",
     "html2canvas": "^1.4.1",
     "html5-qrcode": "^2.3.8",
     "isomorphic-dompurify": "^2.26.0",

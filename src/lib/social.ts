@@ -140,7 +140,9 @@ export async function unfollowUser(
 
     // Delete follow relation
     querySnapshot.forEach((docSnapshot) => {
-      batch.delete(doc(db, 'follows', docSnapshot.id));
+      if (db) {
+        batch.delete(doc(db, 'follows', docSnapshot.id));
+      }
     });
 
     // Update follower's following count

@@ -16,6 +16,12 @@ const STATS_COLLECTION = 'stats';
  * Get user statistics from Firestore
  */
 export async function getUserStats(userId: string): Promise<UserStats | null> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Returning null user stats.');
+    return null;
+  }
+
   try {
     const statsRef = doc(db, STATS_COLLECTION, userId);
     const statsSnap = await getDoc(statsRef);
@@ -45,6 +51,12 @@ export async function getUserStats(userId: string): Promise<UserStats | null> {
  * Increment profile views
  */
 export async function incrementProfileViews(userId: string): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot increment profile views.');
+    return false;
+  }
+
   try {
     const statsRef = doc(db, STATS_COLLECTION, userId);
     
@@ -83,6 +95,12 @@ export async function incrementProfileViews(userId: string): Promise<boolean> {
  * Increment QR scans
  */
 export async function incrementQRScans(userId: string): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot increment QR scans.');
+    return false;
+  }
+
   try {
     const statsRef = doc(db, STATS_COLLECTION, userId);
     
@@ -121,6 +139,12 @@ export async function incrementQRScans(userId: string): Promise<boolean> {
  * Increment link clicks
  */
 export async function incrementLinkClicks(userId: string): Promise<boolean> {
+  // Check if Firebase is initialized
+  if (!db) {
+    console.warn('Firebase is not initialized. Cannot increment link clicks.');
+    return false;
+  }
+
   try {
     const statsRef = doc(db, STATS_COLLECTION, userId);
     

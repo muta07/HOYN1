@@ -118,7 +118,7 @@ export default function AskPage() {
             <h1 className="text-4xl font-black glow-text font-orbitron mb-4">
               💬 Anonim Mesaj
             </h1>
-            <div className="bg-gradient-to-r from-purple-600/20 to-pink-600/20 p-4 rounded-lg border border-purple-500/30">
+            <div className="bg-gradient-to-r from-purple-600/20 to-purple-800/20 p-4 rounded-lg border border-purple-500/30">
               <p className="text-gray-300 mb-1">
                 👤 <span className="text-purple-400 font-bold text-xl">{username}</span> kullanıcısına
               </p>

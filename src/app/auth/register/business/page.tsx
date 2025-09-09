@@ -63,7 +63,7 @@ export default function BusinessRegisterPage() {
       <div className="max-w-2xl mx-auto">
         <AnimatedCard direction="scale" delay={0}>
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent font-orbitron mb-4 glow-text">
+            <h1 className="text-4xl font-black bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent font-orbitron mb-4 glow-text">
               🏢 İşletme Hesabı
             </h1>
             <p className="text-gray-300 mb-2">İşletmeni dijital dünyaya taşı!</p>

@@ -1,7 +1,7 @@
 // src/lib/constants.ts
 export const COLORS = {
   primary: '#9C27B0',      // Ana mor
-  secondary: '#E040FB',    // Neon mor
+  secondary: '#651FFF',    // Neon mor
   background: '#000000',   // Siyah arka plan
   text: '#FFFFFF',         // Beyaz yazı
   grayDark: '#1A1A1A',     // Koyu gri
