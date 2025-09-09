@@ -46,12 +46,24 @@ export default function MessagingTestPage() {
     loadData();
 
     // Set up real-time listener
-    const unsubscribe = onConversationsSnapshot(user.uid, (snapshotConversations) => {
+    const unsub = onConversationsSnapshot(user.uid, (snapshotConversations) => {
       setConversations(snapshotConversations);
     });
 
+    // Handle unsubscribe function
+    const unsubscribe = unsub as unknown as (() => void) | { unsubscribe: () => void } | null;
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        } else if (typeof unsubscribe === 'object' && unsubscribe !== null && 'unsubscribe' in unsubscribe) {
+          const unsubObj = unsubscribe as { unsubscribe: () => void };
+          if (typeof unsubObj.unsubscribe === 'function') {
+            unsubObj.unsubscribe();
+          }
+        }
+      }
     };
   }, [user?.uid]);
 
