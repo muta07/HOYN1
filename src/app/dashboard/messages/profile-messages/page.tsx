@@ -58,7 +58,7 @@ export default function ProfileMessagesPage() {
     const loadMessages = async () => {
       try {
         // Set up real-time listener
-        unsubscribe = onProfileMessagesSnapshot(selectedProfile.id, (snapshotMessages) => {
+        const unsub = onProfileMessagesSnapshot(selectedProfile.id, (snapshotMessages) => {
           setMessages(snapshotMessages);
           
           // Scroll to bottom
@@ -66,6 +66,9 @@ export default function ProfileMessagesPage() {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
           }, 100);
         });
+        
+        // Handle unsubscribe function
+        unsubscribe = unsub as unknown as (() => void) | null;
       } catch (error) {
         console.error('Failed to load messages:', error);
       }
@@ -74,7 +77,13 @@ export default function ProfileMessagesPage() {
     loadMessages();
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        if (typeof unsubscribe === 'function') {
+          unsubscribe();
+        } else if (unsubscribe.unsubscribe) {
+          unsubscribe.unsubscribe();
+        }
+      }
     };
   }, [selectedProfile, user?.uid]);
 
