@@ -51,6 +51,9 @@ export default function MessagesPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Real-time listeners
+  let conversationsUnsubscribe: (() => void) | { unsubscribe: () => void } | null = null;
+  let messagesUnsubscribe: (() => void) | { unsubscribe: () => void } | null = null;
+
   useEffect(() => {
     if (!user) return;
 
