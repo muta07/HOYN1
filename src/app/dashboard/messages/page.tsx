@@ -52,31 +52,23 @@ export default function MessagesPage() {
 
   // Real-time listeners
   useEffect(() => {
-    if (!user?.uid) return;
-
-    let conversationsUnsubscribe: (() => void) | null = null;
-    let messagesUnsubscribe: (() => void) | null = null;
+    if (!user) return;
 
     const loadInitialData = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
+        // Load initial conversations and messages
+        const [initialConversations, initialMessages] = await Promise.all([
+          getConversations(user.uid),
+          getAllMessages(user.uid)
+        ]);
         
-        // Load initial conversations
-        const initialConversations = await getUserConversations(user.uid);
-        const processedConversations = await processConversations(initialConversations, user.uid);
-        setConversations(processedConversations);
-        
-        // Load initial messages
-        const initialMessages = await getUserMessages(user.uid);
+        const processed = await processConversations(initialConversations, user.uid);
+        setConversations(processed);
         setAllMessages(initialMessages);
-        
-        // Calculate total unread
-        const totalUnreadCount = processedConversations.reduce((sum, conv) => sum + conv.unreadCount, 0);
-        setTotalUnread(totalUnreadCount);
-        
-        setLoading(false);
       } catch (error) {
         console.error('Failed to load initial data:', error);
+      } finally {
         setLoading(false);
       }
     };
@@ -84,11 +76,11 @@ export default function MessagesPage() {
     loadInitialData();
 
     // Set up real-time listeners
-    conversationsUnsubscribe = onConversationsSnapshot(user.uid, (snapshotConversations) => {
+    const conversationsUnsub = onConversationsSnapshot(user.uid, (snapshotConversations) => {
       processConversations(snapshotConversations, user.uid).then(setConversations);
     });
 
-    messagesUnsubscribe = onMessagesSnapshot(user.uid, (snapshotMessages) => {
+    const messagesUnsub = onMessagesSnapshot(user.uid, (snapshotMessages) => {
       setAllMessages(snapshotMessages);
       
       // Update current conversation messages if one is selected
@@ -97,9 +89,26 @@ export default function MessagesPage() {
       }
     });
 
+    // Store unsubscribe functions
+    conversationsUnsubscribe = conversationsUnsub as unknown as (() => void) | null;
+    messagesUnsubscribe = messagesUnsub as unknown as (() => void) | null;
+
     return () => {
-      if (conversationsUnsubscribe) conversationsUnsubscribe();
-      if (messagesUnsubscribe) messagesUnsubscribe();
+      if (conversationsUnsubscribe) {
+        if (typeof conversationsUnsubscribe === 'function') {
+          conversationsUnsubscribe();
+        } else if (conversationsUnsubscribe.unsubscribe) {
+          conversationsUnsubscribe.unsubscribe();
+        }
+      }
+      
+      if (messagesUnsubscribe) {
+        if (typeof messagesUnsubscribe === 'function') {
+          messagesUnsubscribe();
+        } else if (messagesUnsubscribe.unsubscribe) {
+          messagesUnsubscribe.unsubscribe();
+        }
+      }
     };
   }, [user?.uid]);
 
