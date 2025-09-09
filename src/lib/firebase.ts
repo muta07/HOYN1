@@ -255,10 +255,10 @@ export async function createProfile(
     console.warn('Firebase is not initialized. Profile creation skipped.');
     return null;
   }
-
-  // Additional null check for db
+  
+  // Additional check for db
   if (!db) {
-    console.warn('Firestore database is not available. Profile creation skipped.');
+    console.warn('Firestore is not initialized. Profile creation skipped.');
     return null;
   }
   
