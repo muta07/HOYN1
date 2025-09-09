@@ -255,6 +255,12 @@ export async function createProfile(
     console.warn('Firebase is not initialized. Profile creation skipped.');
     return null;
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Profile creation skipped.');
+    return null;
+  }
   
   try {
     const profileId = `${profileData.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -299,6 +305,12 @@ export async function getUserProfiles(ownerUid: string): Promise<Profile[]> {
     console.warn('Firebase is not initialized. Returning empty profiles array.');
     return [];
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty profiles array.');
+    return [];
+  }
   
   try {
     const profilesRef = collection(db, 'profiles');
@@ -320,6 +332,12 @@ export async function getPrimaryProfileForUser(ownerUid: string): Promise<Profil
     console.warn('Firebase is not initialized. Returning null profile.');
     return null;
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning null profile.');
+    return null;
+  }
   
   try {
     const profiles = await getUserProfiles(ownerUid);
@@ -335,6 +353,12 @@ export async function getProfileById(profileId: string): Promise<Profile | null>
   // Check if Firebase is initialized
   if (!isFirebaseInitialized()) {
     console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning null profile.');
     return null;
   }
   
@@ -355,6 +379,12 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   // Check if Firebase is initialized
   if (!isFirebaseInitialized()) {
     console.warn('Firebase is not initialized. Returning null profile.');
+    return null;
+  }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning null profile.');
     return null;
   }
   
@@ -385,6 +415,12 @@ export async function updateProfile(
     console.warn('Firebase is not initialized. Profile update skipped.');
     return false;
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Profile update skipped.');
+    return false;
+  }
   
   try {
     const profileRef = doc(db, 'profiles', profileId);
@@ -403,6 +439,12 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   // Check if Firebase is initialized
   if (!isFirebaseInitialized()) {
     console.warn('Firebase is not initialized. Profile deletion skipped.');
+    return false;
+  }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Profile deletion skipped.');
     return false;
   }
   
@@ -426,6 +468,12 @@ export async function incrementProfileStats(
     console.warn('Firebase is not initialized. Stats increment skipped.');
     return false;
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Stats increment skipped.');
+    return false;
+  }
   
   try {
     const profileRef = doc(db, 'profiles', profileId);
@@ -447,6 +495,15 @@ export async function getUserSettings(userId: string): Promise<{
   if (!isFirebaseInitialized()) {
     console.warn('Firebase is not initialized. Returning default user settings.');
     // Default settings if Firebase is not available
+    return {
+      canReceiveMessages: true,
+      canReceiveAnonymous: true
+    };
+  }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning default user settings.');
     return {
       canReceiveMessages: true,
       canReceiveAnonymous: true
@@ -481,6 +538,12 @@ export async function getUserDisplayName(userId: string): Promise<string> {
     console.warn('Firebase is not initialized. Returning user ID as display name.');
     return userId;
   }
+
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning user ID as display name.');
+    return userId;
+  }
   
   try {
     const userRef = doc(db, 'users', userId);
@@ -501,6 +564,12 @@ async function getOrCreateConversation(
   recipientId: string, 
   isAnonymous: boolean
 ): Promise<string> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot create conversation.');
+    throw new Error('Database not available');
+  }
+
   try {
     let conversationId: string;
     
@@ -542,6 +611,12 @@ export async function sendMessage(
   text: string, 
   senderName?: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot send message.');
+    return false;
+  }
+
   try {
     // Check if recipient allows messages
     const recipientSettings = await getUserSettings(recipientId);
@@ -592,6 +667,12 @@ export async function sendAnonymousMessage(
   recipientId: string, 
   text: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot send anonymous message.');
+    return false;
+  }
+
   try {
     // Check if recipient allows anonymous messages
     const recipientSettings = await getUserSettings(recipientId);
@@ -633,6 +714,12 @@ export async function sendAnonymousMessage(
 }
 
 export async function getUserMessages(userId: string): Promise<Message[]> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty messages array.');
+    return [];
+  }
+
   try {
     // Get all conversations for this user
     const conversationsRef = collection(db, 'conversations');
@@ -671,6 +758,12 @@ export async function getUserMessages(userId: string): Promise<Message[]> {
 }
 
 export async function getUserConversations(userId: string): Promise<Conversation[]> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty conversations array.');
+    return [];
+  }
+
   try {
     const conversationsRef = collection(db, 'conversations');
     const conversationsSnapshot = await getDocs(conversationsRef);
@@ -731,6 +824,12 @@ export function onMessagesSnapshot(
   userId: string, 
   callback: (messages: Message[]) => void
 ) {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot set up messages listener.');
+    return { unsubscribe: () => {} };
+  }
+
   return onSnapshot(
     collection(db, 'messages'),
     (snapshot) => {
@@ -754,6 +853,12 @@ export function onConversationsSnapshot(
   userId: string, 
   callback: (conversations: Conversation[]) => void
 ) {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot set up conversations listener.');
+    return { unsubscribe: () => {} };
+  }
+
   return onSnapshot(
     collection(db, 'conversations'),
     (snapshot) => {
@@ -774,6 +879,12 @@ export function onConversationsSnapshot(
 
 // Mark message as read
 export async function markMessageAsRead(conversationId: string, messageId: string, userId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot mark message as read.');
+    return false;
+  }
+
   try {
     // For simplicity, we'll mark all messages in conversation as read for this user
     const conversationRef = doc(db, 'conversations', conversationId);
@@ -792,6 +903,12 @@ export async function updateUserMessagingSettings(
   userId: string, 
   settings: { canReceiveMessages: boolean; canReceiveAnonymous: boolean; }
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot update messaging settings.');
+    return false;
+  }
+
   try {
     const settingsRef = doc(db, 'user_settings', userId);
     await setDoc(settingsRef, {
@@ -807,6 +924,12 @@ export async function updateUserMessagingSettings(
 
 // Profile Stats Functions
 export async function incrementProfileViews(profileId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot increment profile views.');
+    return false;
+  }
+
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await updateDoc(profileRef, {
@@ -820,6 +943,12 @@ export async function incrementProfileViews(profileId: string): Promise<boolean>
 }
 
 export async function incrementProfileScans(profileId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.error('Firestore database is not available. Cannot increment profile scans.');
+    return false;
+  }
+
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await updateDoc(profileRef, {
@@ -833,6 +962,12 @@ export async function incrementProfileScans(profileId: string): Promise<boolean>
 }
 
 export async function incrementProfileLinkClicks(profileId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot increment profile link clicks.');
+    return false;
+  }
+
   try {
     const profileRef = doc(db, 'profiles', profileId);
     await updateDoc(profileRef, {
@@ -848,6 +983,12 @@ export async function incrementProfileLinkClicks(profileId: string): Promise<boo
 
 // Follow Functions
 export async function followUser(followerId: string, followingId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot follow user.');
+    return false;
+  }
+
   try {
     const followData: Omit<Follow, 'id'> = {
       followerId,
@@ -869,6 +1010,12 @@ export async function followUser(followerId: string, followingId: string): Promi
 }
 
 export async function unfollowUser(followerId: string, followingId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot unfollow user.');
+    return false;
+  }
+
   try {
     // Find and delete the follow document
     const followsRef = collection(db, 'follows');
@@ -894,6 +1041,12 @@ export async function unfollowUser(followerId: string, followingId: string): Pro
 }
 
 export async function isFollowing(followerId: string, followingId: string): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot check following status.');
+    return false;
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(
@@ -910,6 +1063,12 @@ export async function isFollowing(followerId: string, followingId: string): Prom
 }
 
 export async function getFollowers(profileId: string): Promise<Follow[]> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty followers array.');
+    return [];
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(followsRef, where('followingId', '==', profileId));
@@ -925,6 +1084,12 @@ export async function getFollowers(profileId: string): Promise<Follow[]> {
 }
 
 export async function getFollowing(userId: string): Promise<Follow[]> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty following array.');
+    return [];
+  }
+
   try {
     const followsRef = collection(db, 'follows');
     const q = query(followsRef, where('followerId', '==', userId));
@@ -941,6 +1106,12 @@ export async function getFollowing(userId: string): Promise<Follow[]> {
 
 // Profile Image Upload Functions
 export async function uploadProfileImage(profileId: string, file: File): Promise<string | null> {
+  // Additional null check for storage
+  if (!storage) {
+    console.warn('Firebase storage is not available. Cannot upload profile image.');
+    return null;
+  }
+
   try {
     const storageRef = ref(storage, `profile-images/${profileId}/${Date.now()}_${file.name}`);
     const snapshot = await uploadBytes(storageRef, file);
@@ -953,6 +1124,12 @@ export async function uploadProfileImage(profileId: string, file: File): Promise
 }
 
 export async function deleteProfileImage(imageUrl: string): Promise<boolean> {
+  // Additional null check for storage
+  if (!storage) {
+    console.warn('Firebase storage is not available. Cannot delete profile image.');
+    return false;
+  }
+
   try {
     // Note: This requires knowing the full path. In practice, you might need to store the path
     // For simplicity, we'll assume the image URL contains the path
@@ -971,6 +1148,12 @@ export async function sendProfileMessage(
   senderId: string | null,
   isAnonymous: boolean
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot send profile message.');
+    return false;
+  }
+
   try {
     // Add message to profile's messages subcollection
     const messageData = {
@@ -999,6 +1182,12 @@ export async function replyToProfileMessage(
   messageId: string,
   replyContent: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot reply to profile message.');
+    return false;
+  }
+
   try {
     const messageRef = doc(db, `profiles/${profileId}/messages/${messageId}`);
     await updateDoc(messageRef, {
@@ -1014,6 +1203,12 @@ export async function replyToProfileMessage(
 }
 
 export async function getProfileMessages(profileId: string): Promise<ProfileMessage[]> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning empty profile messages array.');
+    return [];
+  }
+
   try {
     const messagesRef = collection(db, `profiles/${profileId}/messages`);
     const messagesQuery = query(messagesRef, orderBy('timestamp', 'desc'));
@@ -1041,6 +1236,12 @@ export function onProfileMessagesSnapshot(
   profileId: string, 
   callback: (messages: ProfileMessage[]) => void
 ) {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot set up profile messages listener.');
+    return { unsubscribe: () => {} };
+  }
+
   return onSnapshot(
     query(collection(db, `profiles/${profileId}/messages`), orderBy('timestamp', 'desc')),
     (snapshot) => {
@@ -1067,6 +1268,12 @@ export async function followProfile(
   followerProfileId: string,
   followingProfileId: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot follow profile.');
+    return false;
+  }
+
   try {
     // Check if already following
     const isAlreadyFollowing = await isProfileFollowing(followerId, followingProfileId);
@@ -1111,6 +1318,12 @@ export async function unfollowProfile(
   followerProfileId: string,
   followingProfileId: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot unfollow profile.');
+    return false;
+  }
+
   try {
     const batch = writeBatch(db);
 
@@ -1156,6 +1369,12 @@ export async function isProfileFollowing(
   followerId: string,
   followingProfileId: string
 ): Promise<boolean> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot check profile following status.');
+    return false;
+  }
+
   try {
     const followersRef = collection(db, `profiles/${followingProfileId}/followers`);
     const q = query(
@@ -1171,6 +1390,12 @@ export async function isProfileFollowing(
 }
 
 export async function getProfileFollowersCount(profileId: string): Promise<number> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning 0 followers count.');
+    return 0;
+  }
+
   try {
     const followersRef = collection(db, `profiles/${profileId}/followers`);
     const snapshot = await getDocs(followersRef);
@@ -1182,6 +1407,12 @@ export async function getProfileFollowersCount(profileId: string): Promise<numbe
 }
 
 export async function getProfileFollowingCount(profileId: string): Promise<number> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning 0 following count.');
+    return 0;
+  }
+
   try {
     const followingRef = collection(db, `profiles/${profileId}/following`);
     const snapshot = await getDocs(followingRef);
@@ -1196,6 +1427,12 @@ export function onProfileFollowersSnapshot(
   profileId: string,
   callback: (followers: ProfileFollow[]) => void
 ) {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot set up profile followers listener.');
+    return { unsubscribe: () => {} };
+  }
+
   return onSnapshot(
     collection(db, `profiles/${profileId}/followers`),
     (snapshot) => {
@@ -1218,6 +1455,12 @@ export function onProfileFollowingSnapshot(
   profileId: string,
   callback: (following: { id: string; followingProfileId: string; followedAt: Date }[]) => void
 ) {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot set up profile following listener.');
+    return { unsubscribe: () => {} };
+  }
+
   return onSnapshot(
     collection(db, `profiles/${profileId}/following`),
     (snapshot) => {
@@ -1237,6 +1480,12 @@ export function onProfileFollowingSnapshot(
 
 // Export missing functions referenced in other files
 export async function getHOYNProfileByUsername(username: string): Promise<HOYNProfile | null> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Returning null HOYN profile.');
+    return null;
+  }
+
   try {
     const profilesRef = collection(db, 'profiles');
     const q = query(profilesRef, where('username', '==', username));
@@ -1259,6 +1508,12 @@ export async function createHOYNProfile(
   ownerUid: string,
   profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'createdAt'>
 ): Promise<HOYNProfile | null> {
+  // Additional null check for db
+  if (!db) {
+    console.warn('Firestore database is not available. Cannot create HOYN profile.');
+    return null;
+  }
+
   try {
     const profileId = `${profileData.type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const profileRef = doc(db, 'profiles', profileId);
