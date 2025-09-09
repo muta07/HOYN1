@@ -60,7 +60,7 @@ export default function MessagesPage() {
         // Load initial conversations and messages
         const [initialConversations, initialMessages] = await Promise.all([
           getUserConversations(user.uid),
-          getAllMessages(user.uid)
+          getUserMessages(user.uid)
         ]);
         
         const processed = await processConversations(initialConversations, user.uid);
