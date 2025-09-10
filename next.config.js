@@ -52,7 +52,13 @@ const nextConfig = {
   },
   
   // Specify the output directory
-  distDir: '.next'
+  distDir: '.next',
+  
+  // Configure trailing slash behavior
+  trailingSlash: false,
+  
+  // Configure asset prefix
+  assetPrefix: ''
 }
 
 module.exports = nextConfig
