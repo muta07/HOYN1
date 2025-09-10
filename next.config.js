@@ -98,7 +98,10 @@ const nextConfig = {
   // Configure future features
   future: {
     webpack5: true
-  }
+  },
+  
+  // Configure serverless target
+  target: 'serverless'
 }
 
 module.exports = nextConfig
