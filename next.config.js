@@ -49,7 +49,10 @@ const nextConfig = {
         ]
       }
     ]
-  }
+  },
+  
+  // Specify the output directory
+  distDir: '.next'
 }
 
 module.exports = nextConfig
