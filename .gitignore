@@ -95,6 +95,9 @@ test_key.key
 hoyn_qr_veritabani.db
 dist/
 
+# Service Account Key
+service-account-key.json
+
 # qwen-code
 qwen-code/
 
