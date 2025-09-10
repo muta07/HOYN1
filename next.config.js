@@ -73,7 +73,10 @@ const nextConfig = {
       };
     }
     return config;
-  }
+  },
+  
+  // Configure output file tracing
+  output: 'standalone'
 }
 
 module.exports = nextConfig
