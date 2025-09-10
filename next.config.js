@@ -60,24 +60,6 @@ const nextConfig = {
   // Configure asset prefix
   assetPrefix: '',
   
-  // Configure static optimization
-  staticOptimization: true,
-  
-  // Configure webpack optimization
-  webpack: (config, { isServer }) => {
-    // Fixes npm packages that depend on `fs` module
-    if (!isServer) {
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-      };
-    }
-    return config;
-  },
-  
-  // Configure output file tracing
-  output: 'standalone',
-  
   // Configure compression
   compress: true,
   
@@ -93,15 +75,7 @@ const nextConfig = {
   // Configure generate builds
   generateBuildId: async () => {
     return 'hoyn-build-' + Date.now();
-  },
-  
-  // Configure future features
-  future: {
-    webpack5: true
-  },
-  
-  // Configure serverless target
-  target: 'serverless'
+  }
 }
 
 module.exports = nextConfig
