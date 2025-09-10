@@ -88,7 +88,12 @@ const nextConfig = {
   reactStrictMode: true,
   
   // Configure cross origin resource policy
-  crossOrigin: 'anonymous'
+  crossOrigin: 'anonymous',
+  
+  // Configure generate builds
+  generateBuildId: async () => {
+    return 'hoyn-build-' + Date.now();
+  }
 }
 
 module.exports = nextConfig
