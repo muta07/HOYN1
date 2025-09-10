@@ -79,7 +79,10 @@ const nextConfig = {
   output: 'standalone',
   
   // Configure compression
-  compress: true
+  compress: true,
+  
+  // Configure powered by header
+  poweredByHeader: false
 }
 
 module.exports = nextConfig
