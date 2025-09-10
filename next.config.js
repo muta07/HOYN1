@@ -76,7 +76,10 @@ const nextConfig = {
   // Configure generate builds
   generateBuildId: async () => {
     return 'hoyn-build-' + Date.now();
-  }
+  },
+  
+  // Configure output file tracing
+  output: 'standalone'
 }
 
 module.exports = nextConfig
