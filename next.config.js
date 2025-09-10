@@ -93,6 +93,11 @@ const nextConfig = {
   // Configure generate builds
   generateBuildId: async () => {
     return 'hoyn-build-' + Date.now();
+  },
+  
+  // Configure future features
+  future: {
+    webpack5: true
   }
 }
 
