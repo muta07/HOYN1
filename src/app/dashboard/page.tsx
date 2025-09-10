@@ -13,7 +13,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Dashboard: useEffect triggered', { user, loading });
     if (!loading && !user) {
+      console.log('Dashboard: No user, redirecting to home');
       router.push('/');
     }
   }, [user, loading, router]);
@@ -27,7 +29,10 @@ export default function DashboardPage() {
     }
   };
 
+  console.log('Dashboard: Rendering', { user, profile, accountType, loading });
+
   if (loading) {
+    console.log('Dashboard: Showing loading state');
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loading size="lg" text="Dashboard yükleniyor..." />
@@ -35,10 +40,15 @@ export default function DashboardPage() {
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    console.log('Dashboard: No user, returning null');
+    return null;
+  }
 
   const username = getUserDisplayName(user, profile);
   const isBusinessAccount = accountType === 'business';
+
+  console.log('Dashboard: Showing main content', { username, isBusinessAccount });
 
   return (
     <div className="min-h-screen bg-black text-white py-24 px-6">

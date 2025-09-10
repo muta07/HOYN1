@@ -84,6 +84,7 @@ export async function createUserProfile(
  * Gets user profile from Firestore
  */
 export async function getUserProfile(uid: string): Promise<UserProfile | null> {
+  console.log('getUserProfile called with uid:', uid);
   // Check if Firebase is initialized
   if (!db) {
     console.warn('Firebase is not initialized. Returning null user profile.');
@@ -92,19 +93,24 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
   try {
     const docRef = doc(db, 'users', uid);
+    console.log('Attempting to get user profile document');
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
+      console.log('User profile document found');
       const data = docSnap.data();
       return {
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date()
       } as UserProfile;
+    } else {
+      console.log('User profile document not found');
     }
     return null;
   } catch (error) {
     console.error('Error getting user profile:', error);
+    // Return null instead of throwing to prevent hanging the loading state
     return null;
   }
 }
@@ -150,6 +156,7 @@ export async function createBusinessProfile(
  * Gets business profile from Firestore
  */
 export async function getBusinessProfile(uid: string): Promise<BusinessProfile | null> {
+  console.log('getBusinessProfile called with uid:', uid);
   // Check if Firebase is initialized
   if (!db) {
     console.warn('Firebase is not initialized. Returning null business profile.');
@@ -158,19 +165,24 @@ export async function getBusinessProfile(uid: string): Promise<BusinessProfile |
 
   try {
     const docRef = doc(db, 'businesses', uid);
+    console.log('Attempting to get business profile document');
     const docSnap = await getDoc(docRef);
     
     if (docSnap.exists()) {
+      console.log('Business profile document found');
       const data = docSnap.data();
       return {
         ...data,
         createdAt: data.createdAt?.toDate() || new Date(),
         updatedAt: data.updatedAt?.toDate() || new Date()
       } as BusinessProfile;
+    } else {
+      console.log('Business profile document not found');
     }
     return null;
   } catch (error) {
     console.error('Error getting business profile:', error);
+    // Return null instead of throwing to prevent hanging the loading state
     return null;
   }
 }

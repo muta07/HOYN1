@@ -203,6 +203,8 @@ const firebaseConfig = {
   measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
 };
 
+console.log('Firebase config:', firebaseConfig);
+
 declare global {
   var firebaseApp: import('firebase/app').FirebaseApp | undefined;
 }
@@ -213,21 +215,32 @@ let storage: any = null; // Fix type error by using any instead of Storage
 let auth: import('firebase/auth').Auth | null = null;
 
 try {
+  console.log('Initializing Firebase...');
   if (firebaseConfig.apiKey) {
+    console.log('Firebase API key found, proceeding with initialization');
     if (typeof window !== 'undefined' && !globalThis.firebaseApp) {
+      console.log('Creating new Firebase app instance');
       app = initializeApp(firebaseConfig);
       globalThis.firebaseApp = app;
     } else if (typeof window !== 'undefined' && globalThis.firebaseApp) {
+      console.log('Using existing Firebase app instance');
       app = globalThis.firebaseApp;
     } else if (firebaseConfig.apiKey) {
+      console.log('Creating Firebase app instance for server-side');
       app = initializeApp(firebaseConfig);
     }
     
     if (app) {
+      console.log('Firebase app initialized successfully');
       db = getFirestore(app);
       storage = getStorage(app);
       auth = getAuth(app);
+      console.log('Firestore, Storage, and Auth initialized');
+    } else {
+      console.log('Firebase app not initialized');
     }
+  } else {
+    console.log('Firebase API key not found, skipping initialization');
   }
 } catch (error) {
   console.error('Failed to initialize Firebase:', error);
@@ -238,12 +251,16 @@ try {
   auth = null;
 }
 
+console.log('Firebase initialization result:', { app: !!app, db: !!db, storage: !!storage, auth: !!auth });
+
 // Export Firebase instances (may be null if Firebase is not configured)
 export { db, storage, auth };
 
 // Helper function to check if Firebase is initialized
 function isFirebaseInitialized(): boolean {
-  return db !== null && auth !== null && storage !== null;
+  const initialized = db !== null && auth !== null && storage !== null;
+  console.log('isFirebaseInitialized:', initialized);
+  return initialized;
 }
 
 export async function createProfile(

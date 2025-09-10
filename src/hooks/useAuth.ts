@@ -21,6 +21,8 @@ export const useAuth = () => {
   const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
 
   useEffect(() => {
+    console.log('useAuth: useEffect triggered');
+    
     // Check if Firebase is initialized
     if (!auth) {
       console.warn('Firebase Auth is not initialized. Cannot listen to auth state changes.');
@@ -28,32 +30,67 @@ export const useAuth = () => {
       return;
     }
 
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('useAuth: Timeout reached, forcing loading to false');
+      setLoading(false);
+      setError('Authentication timeout');
+    }, 15000); // 15 second timeout
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('useAuth: onAuthStateChanged triggered', { user });
       setUser(user);
       
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
+      
       if (user) {
-        // Kullanıcı giriş yaptıysa profil bilgilerini yükle
-        // Önce business profile'a bak
-        const businessProfile = await getBusinessProfile(user.uid);
-        if (businessProfile) {
-          setProfile(businessProfile);
-          setAccountType('business');
-        } else {
-          // Business yoksa personal profile'a bak
-          const userProfile = await getUserProfile(user.uid);
-          setProfile(userProfile);
-          setAccountType(userProfile ? 'personal' : null);
+        console.log('useAuth: User is logged in, loading profile...');
+        try {
+          // Kullanıcı giriş yaptıysa profil bilgilerini yükle
+          // Önce business profile'a bak
+          const businessProfile = await getBusinessProfile(user.uid);
+          if (businessProfile) {
+            console.log('useAuth: Business profile found', businessProfile);
+            setProfile(businessProfile);
+            setAccountType('business');
+          } else {
+            // Business yoksa personal profile'a bak
+            const userProfile = await getUserProfile(user.uid);
+            console.log('useAuth: Personal profile result', userProfile);
+            setProfile(userProfile);
+            setAccountType(userProfile ? 'personal' : null);
+          }
+        } catch (err: any) {
+          console.error('useAuth: Error loading profile', err);
+          setError(err.message || 'Error loading profile');
+          // Even if there's an error loading the profile, we should still set loading to false
+          setProfile(null);
+          setAccountType(null);
         }
       } else {
+        console.log('useAuth: User is logged out, clearing profile');
         // Kullanıcı çıkış yaptıysa profili temizle
         setProfile(null);
         setAccountType(null);
       }
       
+      console.log('useAuth: Setting loading to false');
       setLoading(false);
+    }, (error) => {
+      // Error handler for onAuthStateChanged
+      console.error('useAuth: Error in onAuthStateChanged', error);
+      // Clear the timeout since we got an error
+      clearTimeout(timeoutId);
+      setLoading(false);
+      setError(error.message || 'Authentication error');
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('useAuth: Unsubscribing from auth state changes');
+      unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   // Email/Password ile giriş

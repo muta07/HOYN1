@@ -9,18 +9,50 @@ import Loading from '@/components/ui/Loading';
 import AnimatedCard from '@/components/ui/AnimatedCard';
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, error } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (user) router.push('/dashboard');
+    console.log('Home page: useEffect triggered', { user, loading, error });
+    if (user) {
+      console.log('Home page: User detected, redirecting to dashboard');
+      router.push('/dashboard');
+    }
   }, [user, router]);
 
-  if (loading) return (
-    <div className="min-h-screen flex items-center justify-center">
-      <Loading size="lg" text="HOYN! Yükleniyor..." />
-    </div>
-  );
+  console.log('Home page: Rendering', { user, loading, error });
+
+  if (loading) {
+    console.log('Home page: Showing loading state');
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loading size="lg" text="HOYN! Yükleniyor..." />
+      </div>
+    );
+  }
+
+  // Hata durumunda kullanıcıya bilgi ver
+  if (error) {
+    console.log('Home page: Showing error state', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="glass-effect p-8 rounded-xl cyber-border text-center max-w-md">
+          <h2 className="text-2xl font-bold text-red-400 mb-4">Bir Hata Oluştu</h2>
+          <p className="text-gray-300 mb-6">Üzgünüz, uygulamada bir hata oluştu. Lütfen sayfayı yenileyin veya daha sonra tekrar deneyin.</p>
+          <p className="text-sm text-gray-500 mb-6">Hata detayı: {error}</p>
+          <NeonButton 
+            onClick={() => window.location.reload()} 
+            variant="primary"
+            size="md"
+          >
+            Sayfayı Yenile
+          </NeonButton>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('Home page: Showing main content');
 
   return (
     <div className="min-h-screen pt-24 px-6">
