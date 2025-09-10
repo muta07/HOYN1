@@ -1,12 +1,5 @@
 {
   "version": 2,
-  "outputDirectory": ".next",
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
-    }
-  ],
   "routes": [
     {
       "src": "/_next/static/(?:[^/]+/)*[^/]+\\.(?:js|css|png|jpg|jpeg|gif|svg|ico|webp|avif|json|woff|woff2|ttf|eot|otf)",
