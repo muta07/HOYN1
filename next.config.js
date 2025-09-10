@@ -85,7 +85,10 @@ const nextConfig = {
   poweredByHeader: false,
   
   // Configure react strict mode
-  reactStrictMode: true
+  reactStrictMode: true,
+  
+  // Configure cross origin resource policy
+  crossOrigin: 'anonymous'
 }
 
 module.exports = nextConfig
