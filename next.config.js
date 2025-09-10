@@ -58,7 +58,10 @@ const nextConfig = {
   trailingSlash: false,
   
   // Configure asset prefix
-  assetPrefix: ''
+  assetPrefix: '',
+  
+  // Configure static optimization
+  staticOptimization: true
 }
 
 module.exports = nextConfig
