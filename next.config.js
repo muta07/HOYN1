@@ -76,7 +76,10 @@ const nextConfig = {
   },
   
   // Configure output file tracing
-  output: 'standalone'
+  output: 'standalone',
+  
+  // Configure compression
+  compress: true
 }
 
 module.exports = nextConfig
