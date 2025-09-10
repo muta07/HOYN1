@@ -82,7 +82,10 @@ const nextConfig = {
   compress: true,
   
   // Configure powered by header
-  poweredByHeader: false
+  poweredByHeader: false,
+  
+  // Configure react strict mode
+  reactStrictMode: true
 }
 
 module.exports = nextConfig
