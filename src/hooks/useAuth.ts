@@ -21,7 +21,11 @@ export const useAuth = () => {
   const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+    
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!isMounted) return;
+      
       setUser(user);
       
       if (user) {
@@ -29,6 +33,7 @@ export const useAuth = () => {
         // Önce business profile'a bak
         getBusinessProfile(user.uid)
           .then(businessProfile => {
+            if (!isMounted) return;
             if (businessProfile) {
               setProfile(businessProfile);
               setAccountType('business');
@@ -38,27 +43,36 @@ export const useAuth = () => {
             }
           })
           .then(userProfile => {
+            if (!isMounted) return;
             if (userProfile) {
               setProfile(userProfile);
               setAccountType(userProfile ? 'personal' : null);
             }
           })
           .catch(error => {
+            if (!isMounted) return;
             console.error("Error loading profile:", error);
             setError(error.message);
           })
           .finally(() => {
-            setLoading(false);
+            if (isMounted) {
+              setLoading(false);
+            }
           });
       } else {
         // Kullanıcı çıkış yaptıysa profili temizle
-        setProfile(null);
-        setAccountType(null);
-        setLoading(false);
+        if (isMounted) {
+          setProfile(null);
+          setAccountType(null);
+          setLoading(false);
+        }
       }
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   // Email/Password ile giriş
