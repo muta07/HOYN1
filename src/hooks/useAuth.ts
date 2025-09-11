@@ -21,29 +21,41 @@ export const useAuth = () => {
   const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       
       if (user) {
         // Kullanıcı giriş yaptıysa profil bilgilerini yükle
         // Önce business profile'a bak
-        const businessProfile = await getBusinessProfile(user.uid);
-        if (businessProfile) {
-          setProfile(businessProfile);
-          setAccountType('business');
-        } else {
-          // Business yoksa personal profile'a bak
-          const userProfile = await getUserProfile(user.uid);
-          setProfile(userProfile);
-          setAccountType(userProfile ? 'personal' : null);
-        }
+        getBusinessProfile(user.uid)
+          .then(businessProfile => {
+            if (businessProfile) {
+              setProfile(businessProfile);
+              setAccountType('business');
+            } else {
+              // Business yoksa personal profile'a bak
+              return getUserProfile(user.uid);
+            }
+          })
+          .then(userProfile => {
+            if (userProfile) {
+              setProfile(userProfile);
+              setAccountType(userProfile ? 'personal' : null);
+            }
+          })
+          .catch(error => {
+            console.error("Error loading profile:", error);
+            setError(error.message);
+          })
+          .finally(() => {
+            setLoading(false);
+          });
       } else {
         // Kullanıcı çıkış yaptıysa profili temizle
         setProfile(null);
         setAccountType(null);
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => unsubscribe();
