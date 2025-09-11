@@ -11,6 +11,21 @@ npx vercel env add NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID "818752786451" --env
 npx vercel env add NEXT_PUBLIC_FIREBASE_APP_ID "1:818752786451:web:d3dc938ad4ee898a9d6fe6" --environment=production
 npx vercel env add NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID "G-HQ6KYZZPQG" --environment=production
 
+# Application Settings
+npx vercel env add NEXT_PUBLIC_APP_URL "https://your-app-name.vercel.app" --environment=production
+npx vercel env add NEXT_PUBLIC_APP_NAME "HOYN!" --environment=production
+
+# Security Settings
+Write-Host "🔐 Setting up security configuration..." -ForegroundColor Yellow
+$nextAuthSecret = Read-Host "Enter your NEXTAUTH_SECRET (or press Enter to generate one)"
+if (-not $nextAuthSecret) {
+    # Generate a random secret
+    $nextAuthSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 32 | ForEach-Object {[char]$_})
+    Write-Host "Generated NEXTAUTH_SECRET: $nextAuthSecret" -ForegroundColor Cyan
+}
+npx vercel env add NEXTAUTH_SECRET "$nextAuthSecret" --environment=production
+npx vercel env add NEXTAUTH_URL "https://your-app-name.vercel.app" --environment=production
+
 # Hugging Face API Configuration
 Write-Host "🤗 Setting up Hugging Face API..." -ForegroundColor Yellow
 Write-Host "Please get your Hugging Face API token from: https://huggingface.co/settings/tokens" -ForegroundColor Cyan
