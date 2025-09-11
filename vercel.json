@@ -1,18 +1,5 @@
 {
   "version": 2,
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html"
-    }
-  ],
-  "env": {
-    "NODE_ENV": "production"
-  },
   "build": {
     "env": {
       "NEXT_PUBLIC_APP_URL": "https://hoyn-1.vercel.app"

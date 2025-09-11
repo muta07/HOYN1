@@ -1,5 +1,5 @@
 // src/app/subscription/page.tsx
-'use client';
+export const dynamic = 'force-dynamic';
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -30,7 +30,6 @@ interface UserSubscription {
 export default function SubscriptionPage() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [isClient, setIsClient] = useState(false);
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
   const [subscriptionLoading, setSubscriptionLoading] = useState(true);
@@ -38,8 +37,6 @@ export default function SubscriptionPage() {
   const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
-    
     // Client-side'da subscription verisini yükle
     if (typeof window !== 'undefined') {
       const loadSubscriptionData = async () => {
@@ -87,7 +84,7 @@ export default function SubscriptionPage() {
     }
   }, []);
 
-  if (!isClient || authLoading || subscriptionLoading) {
+  if (authLoading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loading size="lg" text="Üyelik bilgileri yükleniyor..." />
