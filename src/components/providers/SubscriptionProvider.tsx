@@ -24,7 +24,7 @@ interface SubscriptionContextType {
 const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined);
 
 export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const plans = getSubscriptionPlans();
@@ -166,8 +166,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
                           subscription?.status === 'active';
 
   useEffect(() => {
-    loadSubscription();
-  }, [user]);
+    if (!authLoading) {
+      loadSubscription();
+    }
+  }, [user, authLoading]);
 
   const value: SubscriptionContextType = {
     subscription,
