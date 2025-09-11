@@ -12,5 +12,10 @@
   ],
   "env": {
     "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NEXT_PUBLIC_APP_URL": "https://hoyn-1.vercel.app"
+    }
   }
 }
