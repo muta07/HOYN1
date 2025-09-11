@@ -4,68 +4,20 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSubscription } from '@/components/providers/SubscriptionProvider';
 import Loading from '@/components/ui/Loading';
 import { ThemedCard, ThemedButton, ThemedText, ThemedBadge } from '@/components/ui/ThemedComponents';
 import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
 
 export default function SubscriptionPage() {
   const { user, loading: authLoading } = useAuth();
+  const { subscription, plans, hasActiveSubscription, subscribeToPlan, cancelSubscription, loading: subscriptionLoading } = useSubscription();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
-  const [subscription, setSubscription] = useState(null);
-  const [plans, setPlans] = useState([]);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
   const [processing, setProcessing] = useState<string | null>(null);
 
   useEffect(() => {
     setIsClient(true);
-    
-    // Client-side'da subscription verisini yükle
-    if (typeof window !== 'undefined') {
-      const loadSubscriptionData = async () => {
-        try {
-          // Varsayılan planlar
-          const defaultPlans = [
-            {
-              id: 'basic',
-              name: 'Basic',
-              price: 0,
-              features: ['5 QR Kod', 'Temel İstatistikler', 'Standart Tema'],
-              limitations: ['Sınırsız QR Kod (✗)', 'Gelişmiş İstatistikler (✗)', 'Tüm Tema Seçenekleri (✗)'],
-              isPopular: false,
-              isPremium: false
-            },
-            {
-              id: 'pro',
-              name: 'Pro',
-              price: 9.99,
-              features: ['Sınırsız QR Kod', 'Gelişmiş İstatistikler', 'Tüm Tema Seçenekleri', 'Özel QR Tasarımı'],
-              limitations: ['İşletme Profili (✗)', 'Takım Yönetimi (✗)', 'API Erişimi (✗)'],
-              isPopular: true,
-              isPremium: true
-            },
-            {
-              id: 'business',
-              name: 'Business',
-              price: 29.99,
-              features: ['Tüm Pro Özellikleri', 'İşletme Profili', 'Takım Yönetimi', 'API Erişimi'],
-              limitations: [],
-              isPopular: false,
-              isPremium: true
-            }
-          ];
-          
-          setPlans(defaultPlans);
-          setSubscriptionLoading(false);
-        } catch (error) {
-          console.error('Error loading subscription data:', error);
-          setSubscriptionLoading(false);
-        }
-      };
-      
-      loadSubscriptionData();
-    }
   }, []);
 
   if (!isClient || authLoading || subscriptionLoading) {
@@ -84,8 +36,12 @@ export default function SubscriptionPage() {
   const handleSubscribe = async (planId: string) => {
     setProcessing(planId);
     try {
-      // In a real implementation, this would redirect to a payment processor
-      alert(`${planId} planına başarıyla geçiş yapıldı!`);
+      const success = await subscribeToPlan(planId);
+      if (success) {
+        alert(`${planId} planına başarıyla geçiş yapıldı!`);
+      } else {
+        alert('Plan değişikliği sırasında bir hata oluştu.');
+      }
     } catch (error) {
       console.error('Subscription error:', error);
       alert('Plan değişikliği sırasında bir hata oluştu.');
@@ -98,7 +54,12 @@ export default function SubscriptionPage() {
     if (window.confirm('Üyeliğinizi iptal etmek istediğinize emin misiniz?')) {
       setProcessing('cancel');
       try {
-        alert('Üyeliğiniz iptal edildi. Mevcut dönemin sonuna kadar hizmeti kullanmaya devam edebilirsiniz.');
+        const success = await cancelSubscription();
+        if (success) {
+          alert('Üyeliğiniz iptal edildi. Mevcut dönemin sonuna kadar hizmeti kullanmaya devam edebilirsiniz.');
+        } else {
+          alert('İptal işlemi sırasında bir hata oluştu.');
+        }
       } catch (error) {
         console.error('Cancellation error:', error);
         alert('İptal işlemi sırasında bir hata oluştu.');
@@ -114,7 +75,6 @@ export default function SubscriptionPage() {
 
   const getCurrentPlan = () => {
     if (!subscription) return null;
-    // @ts-ignore
     return plans.find(plan => plan.id === subscription.planId);
   };
 
@@ -168,18 +128,14 @@ export default function SubscriptionPage() {
                     </ThemedText>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      {/* @ts-ignore */}
                       <ThemedText variant="muted">
                         Başlangıç: {subscription?.startDate ? formatDate(new Date(subscription.startDate)) : 'Bilinmiyor'}
                       </ThemedText>
-                      {/* @ts-ignore */}
                       <ThemedText variant="muted">
                         Bitiş: {subscription?.endDate ? formatDate(new Date(subscription.endDate)) : 'Bilinmiyor'}
                       </ThemedText>
-                      {/* @ts-ignore */}
                       {subscription?.cancelDate && (
                         <ThemedText variant="muted">
-                          {/* @ts-ignore */}
                           İptal: {formatDate(new Date(subscription.cancelDate))}
                         </ThemedText>
                       )}
@@ -214,7 +170,6 @@ export default function SubscriptionPage() {
             
             <div className="grid md:grid-cols-3 gap-6">
               {plans.map((plan: any) => {
-                // @ts-ignore
                 const isCurrentPlan = subscription?.planId === plan.id;
                 const isDisabled = processing !== null || (isCurrentPlan && hasActiveSubscription);
                 
