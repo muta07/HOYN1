@@ -9,6 +9,9 @@ import Loading from '@/components/ui/Loading';
 import { ThemedCard, ThemedButton, ThemedText, ThemedBadge } from '@/components/ui/ThemedComponents';
 import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
 
+// Bu sayfayı client-only olarak işaretleyelim
+export const dynamic = 'force-client';
+
 export default function SubscriptionPage() {
   const { user, loading: authLoading } = useAuth();
   const { subscription, plans, hasActiveSubscription, subscribeToPlan, cancelSubscription, loading: subscriptionLoading } = useSubscription();
@@ -20,7 +23,16 @@ export default function SubscriptionPage() {
     setIsClient(true);
   }, []);
 
-  if (!isClient || authLoading || subscriptionLoading) {
+  // Client-side render kontrolü
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Üyelik bilgileri yükleniyor..." />
+      </div>
+    );
+  }
+
+  if (authLoading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loading size="lg" text="Üyelik bilgileri yükleniyor..." />

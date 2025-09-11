@@ -11,6 +11,9 @@ import { ThemedProfileWrapper } from '@/components/providers/ThemeProvider';
 import AnalyticsDashboard from '@/components/premium/AnalyticsDashboard';
 import AdvancedQRDesigner from '@/components/premium/AdvancedQRDesigner';
 
+// Bu sayfayı client-only olarak işaretleyelim
+export const dynamic = 'force-client';
+
 export default function PremiumDashboard() {
   const { user, loading: authLoading } = useAuth();
   const { subscription, hasPremiumAccess, loading: subscriptionLoading } = useSubscription();
@@ -22,7 +25,16 @@ export default function PremiumDashboard() {
     setIsClient(true);
   }, []);
 
-  if (!isClient || authLoading || subscriptionLoading) {
+  // Client-side render kontrolü
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loading size="lg" text="Premium panel yükleniyor..." />
+      </div>
+    );
+  }
+
+  if (authLoading || subscriptionLoading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <Loading size="lg" text="Premium panel yükleniyor..." />
