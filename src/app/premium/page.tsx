@@ -12,7 +12,7 @@ import AnalyticsDashboard from '@/components/premium/AnalyticsDashboard';
 import AdvancedQRDesigner from '@/components/premium/AdvancedQRDesigner';
 
 // Bu sayfayı client-only olarak işaretleyelim
-export const dynamic = 'force-client';
+export const dynamic = 'force-dynamic';
 
 export default function PremiumDashboard() {
   const { user, loading: authLoading } = useAuth();
