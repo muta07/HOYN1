@@ -12,7 +12,7 @@ if (!admin.apps.length) {
       
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        databaseURL: process.env.FIREBASE_DATABASE_URL || process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       });
     } catch (fileError) {
       // Fallback to environment variables
@@ -37,7 +37,7 @@ if (!admin.apps.length) {
           clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
           privateKey: privateKey,
         }),
-        databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        databaseURL: process.env.FIREBASE_DATABASE_URL || process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
       });
     }
   } catch (error) {
