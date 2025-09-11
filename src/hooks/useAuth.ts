@@ -1,5 +1,5 @@
 // src/hooks/useAuth.ts
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { auth, UserProfile, BusinessProfile } from '@/lib/firebase';
 import { 
   onAuthStateChanged, 
@@ -19,49 +19,57 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!isMounted) return;
+    // Cleanup function to set isMountedRef to false when component unmounts
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      // Early return if component is unmounted
+      if (!isMountedRef.current) return;
       
       setUser(user);
       
       if (user) {
-        // Kullanıcı giriş yaptıysa profil bilgilerini yükle
-        // Önce business profile'a bak
-        getBusinessProfile(user.uid)
-          .then(businessProfile => {
-            if (!isMounted) return;
-            if (businessProfile) {
-              setProfile(businessProfile);
-              setAccountType('business');
-            } else {
-              // Business yoksa personal profile'a bak
-              return getUserProfile(user.uid);
-            }
-          })
-          .then(userProfile => {
-            if (!isMounted) return;
+        try {
+          // Kullanıcı giriş yaptıysa profil bilgilerini yükle
+          // Önce business profile'a bak
+          const businessProfile = await getBusinessProfile(user.uid);
+          
+          if (!isMountedRef.current) return;
+          
+          if (businessProfile) {
+            setProfile(businessProfile);
+            setAccountType('business');
+          } else {
+            // Business yoksa personal profile'a bak
+            const userProfile = await getUserProfile(user.uid);
+            
+            if (!isMountedRef.current) return;
+            
             if (userProfile) {
               setProfile(userProfile);
               setAccountType(userProfile ? 'personal' : null);
             }
-          })
-          .catch(error => {
-            if (!isMounted) return;
-            console.error("Error loading profile:", error);
-            setError(error.message);
-          })
-          .finally(() => {
-            if (isMounted) {
-              setLoading(false);
-            }
-          });
+          }
+        } catch (err: any) {
+          if (isMountedRef.current) {
+            console.error("Error loading profile:", err);
+            setError(err.message);
+          }
+        } finally {
+          if (isMountedRef.current) {
+            setLoading(false);
+          }
+        }
       } else {
         // Kullanıcı çıkış yaptıysa profili temizle
-        if (isMounted) {
+        if (isMountedRef.current) {
           setProfile(null);
           setAccountType(null);
           setLoading(false);
@@ -70,7 +78,6 @@ export const useAuth = () => {
     });
 
     return () => {
-      isMounted = false;
       unsubscribe();
     };
   }, []);
