@@ -69,15 +69,16 @@ export function middleware(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('X-XSS-Protection', '1; mode=block');
   
-  // CSP for enhanced security
+  // CSP for enhanced security - more permissive for development
   response.headers.set('Content-Security-Policy', 
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com; " +
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.gstatic.com https://*.vercel-insights.com https://vercel.live; " +
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-    "font-src 'self' https://fonts.gstatic.com; " +
+    "font-src 'self' https://fonts.gstatic.com data:; " +
     "img-src 'self' data: blob: https:; " +
-    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com; " +
-    "frame-src 'none';"
+    "connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://*.vercel-insights.com; " +
+    "frame-src 'none'; " +
+    "worker-src 'self' blob:;"
   );
 
   return response;

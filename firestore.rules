@@ -20,7 +20,7 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == businessId;
       
       // Allow reading business profiles (they are generally public)
-      allow read: if request.auth != null;
+      allow read: if true;
     }
     
     // Messages collection - users can read messages sent to them or by them
@@ -105,11 +105,6 @@ service cloud.firestore {
     match /public/{document=**} {
       allow read: if true;
       allow write: if false; // Only admins can write (handled via Cloud Functions)
-    }
-    
-    // Allow reading business profiles without authentication for public access
-    match /businesses/{businessId} {
-      allow read: if true;
     }
     
     // Default deny rule - explicitly deny everything else
