@@ -16,11 +16,6 @@ const nextConfig = {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
   
-  // Disable ESLint during build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  
   // Production URL configuration
   async redirects() {
     return [
