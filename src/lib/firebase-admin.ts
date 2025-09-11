@@ -19,12 +19,15 @@ if (!admin.apps.length) {
       const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
       if (!privateKey) {
+        console.error('The FIREBASE_PRIVATE_KEY environment variable is not set.');
         throw new Error('The FIREBASE_PRIVATE_KEY environment variable is not set.');
       }
       if (!process.env.FIREBASE_CLIENT_EMAIL) {
+        console.error('The FIREBASE_CLIENT_EMAIL environment variable is not set.');
         throw new Error('The FIREBASE_CLIENT_EMAIL environment variable is not set.');
       }
       if (!process.env.FIREBASE_PROJECT_ID) {
+        console.error('The FIREBASE_PROJECT_ID environment variable is not set.');
         throw new Error('The FIREBASE_PROJECT_ID environment variable is not set.');
       }
 
@@ -39,6 +42,8 @@ if (!admin.apps.length) {
     }
   } catch (error) {
     console.error('Firebase admin initialization error', error);
+    // Re-throw the error to prevent the app from starting with incomplete Firebase configuration
+    throw error;
   }
 }
 
