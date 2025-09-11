@@ -1,7 +1,7 @@
 // src/components/providers/ThemeProvider.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { UserProfile, BusinessProfile, HOYNProfile } from '@/lib/firebase';
 
 // Update the type to accept both profile types
@@ -54,6 +54,14 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [customization, setCustomization] = useState<ProfileCustomization | null>(null);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    // Cleanup function to set isMountedRef to false when component unmounts
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const getThemeStyles = (): React.CSSProperties => {
     if (!customization) return {};
@@ -160,7 +168,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   // Apply custom CSS if provided
   useEffect(() => {
-    if (customization && customization.customCSS) {
+    if (customization && customization.customCSS && isMountedRef.current) {
       const styleElement = document.createElement('style');
       styleElement.id = 'hoyn-custom-theme';
       styleElement.textContent = customization.customCSS;
@@ -174,9 +182,11 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       document.head.appendChild(styleElement);
       
       return () => {
-        const element = document.getElementById('hoyn-custom-theme');
-        if (element) {
-          element.remove();
+        if (isMountedRef.current) {
+          const element = document.getElementById('hoyn-custom-theme');
+          if (element) {
+            element.remove();
+          }
         }
       };
     }
@@ -215,9 +225,17 @@ export function ThemedProfileWrapper({
   profile?: ProfileType | null;
 }) {
   const { customization, applyProfileTheme, getThemeStyles, getThemeClasses } = useTheme();
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    if (profile) {
+    // Cleanup function to set isMountedRef to false when component unmounts
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (profile && isMountedRef.current) {
       applyProfileTheme(profile);
     }
   }, [profile, applyProfileTheme]);
