@@ -13,30 +13,13 @@ import AdvancedQRDesigner from '@/components/premium/AdvancedQRDesigner';
 
 export default function PremiumDashboard() {
   const { user, loading: authLoading } = useAuth();
+  const { subscription, hasPremiumAccess, loading: subscriptionLoading } = useSubscription();
   const router = useRouter();
   const [isClient, setIsClient] = useState(false);
-  const [subscription, setSubscription] = useState(null);
-  const [subscriptionLoading, setSubscriptionLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'analytics' | 'designer'>('analytics');
 
   useEffect(() => {
     setIsClient(true);
-    
-    // Client-side'da subscription verisini yükle
-    if (typeof window !== 'undefined') {
-      const loadSubscription = async () => {
-        try {
-          const { useSubscription } = await import('@/components/providers/SubscriptionProvider');
-          // Bu noktada doğrudan hook'u çağıramayız, bu yüzden context'i manuel olarak kontrol edeceğiz
-          setSubscriptionLoading(false);
-        } catch (error) {
-          console.error('Error loading subscription:', error);
-          setSubscriptionLoading(false);
-        }
-      };
-      
-      loadSubscription();
-    }
   }, []);
 
   if (!isClient || authLoading || subscriptionLoading) {
@@ -51,9 +34,6 @@ export default function PremiumDashboard() {
     router.push('/auth/login');
     return null;
   }
-
-  // Check if user has premium access (basit bir kontrol)
-  const hasPremiumAccess = false; // Varsayılan olarak false, gerçek kontrol client-side yapılmalı
 
   if (!hasPremiumAccess) {
     return (
