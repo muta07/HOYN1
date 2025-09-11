@@ -107,6 +107,11 @@ service cloud.firestore {
       allow write: if false; // Only admins can write (handled via Cloud Functions)
     }
     
+    // Allow reading business profiles without authentication for public access
+    match /businesses/{businessId} {
+      allow read: if true;
+    }
+    
     // Default deny rule - explicitly deny everything else
     match /{document=**} {
       allow read, write: if false;
