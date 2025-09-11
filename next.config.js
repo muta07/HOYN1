@@ -91,11 +91,6 @@ const nextConfig = {
       };
     }
     return config;
-  },
-  
-  // Configure future features
-  future: {
-    webpack5: true
   }
 }
 
