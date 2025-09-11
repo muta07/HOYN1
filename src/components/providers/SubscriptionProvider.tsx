@@ -1,7 +1,7 @@
 // src/components/providers/SubscriptionProvider.tsx
 'use client';
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { UserSubscription, getSubscriptionPlans, SubscriptionPlan } from '@/lib/subscriptions';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -28,18 +28,30 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [subscription, setSubscription] = useState<UserSubscription | null>(null);
   const [loading, setLoading] = useState(true);
   const plans = getSubscriptionPlans();
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    // Cleanup function to set isMountedRef to false when component unmounts
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // Load user subscription
   const loadSubscription = async () => {
     if (!user) {
-      setSubscription(null);
-      setLoading(false);
+      if (isMountedRef.current) {
+        setSubscription(null);
+        setLoading(false);
+      }
       return;
     }
 
     try {
       const subscriptionRef = doc(db, 'subscriptions', user.uid);
       const subscriptionDoc = await getDoc(subscriptionRef);
+      
+      if (!isMountedRef.current) return;
       
       if (subscriptionDoc.exists()) {
         const subscriptionData = subscriptionDoc.data();
@@ -66,19 +78,25 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           autoRenew: false
         };
         
-        await setDoc(subscriptionRef, {
-          ...defaultSubscription,
-          startDate: defaultSubscription.startDate,
-          endDate: defaultSubscription.endDate
-        });
-        
-        setSubscription(defaultSubscription);
+        if (isMountedRef.current) {
+          await setDoc(subscriptionRef, {
+            ...defaultSubscription,
+            startDate: defaultSubscription.startDate,
+            endDate: defaultSubscription.endDate
+          });
+          
+          setSubscription(defaultSubscription);
+        }
       }
     } catch (error) {
-      console.error('Error loading subscription:', error);
-      setSubscription(null);
+      if (isMountedRef.current) {
+        console.error('Error loading subscription:', error);
+        setSubscription(null);
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -97,13 +115,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         autoRenew: true
       };
       
-      await setDoc(subscriptionRef, {
-        ...newSubscription,
-        startDate: newSubscription.startDate,
-        endDate: newSubscription.endDate
-      });
-      
-      setSubscription(newSubscription);
+      if (isMountedRef.current) {
+        await setDoc(subscriptionRef, {
+          ...newSubscription,
+          startDate: newSubscription.startDate,
+          endDate: newSubscription.endDate
+        });
+        
+        setSubscription(newSubscription);
+      }
       return true;
     } catch (error) {
       console.error('Error subscribing to plan:', error);
@@ -123,14 +143,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         cancelDate: new Date()
       };
       
-      await setDoc(subscriptionRef, {
-        ...updatedSubscription,
-        startDate: updatedSubscription.startDate,
-        endDate: updatedSubscription.endDate,
-        cancelDate: updatedSubscription.cancelDate
-      }, { merge: true });
-      
-      setSubscription(updatedSubscription);
+      if (isMountedRef.current) {
+        await setDoc(subscriptionRef, {
+          ...updatedSubscription,
+          startDate: updatedSubscription.startDate,
+          endDate: updatedSubscription.endDate,
+          cancelDate: updatedSubscription.cancelDate
+        }, { merge: true });
+        
+        setSubscription(updatedSubscription);
+      }
       return true;
     } catch (error) {
       console.error('Error cancelling subscription:', error);
@@ -140,8 +162,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   // Refresh subscription data
   const refreshSubscription = async () => {
-    setLoading(true);
-    await loadSubscription();
+    if (isMountedRef.current) {
+      setLoading(true);
+      await loadSubscription();
+    }
   };
 
   // Check plan access
@@ -167,6 +191,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     loadSubscription();
+    
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+    };
   }, [user]);
 
   const value: SubscriptionContextType = {
