@@ -1,4 +1,6 @@
 // src/app/layout.tsx
+'use client';
+
 import Navbar from '@/components/Navbar';
 import BottomNavigation from '@/components/BottomNavigation';
 import { ThemeProvider } from '@/components/providers/ThemeProvider';
