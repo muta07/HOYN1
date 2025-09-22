@@ -96,7 +96,7 @@ export const useAuth = () => {
 
   // E-posta/Şifre ile kişisel hesap kaydı
   const registerWithEmail = async (email: string, password: string, username: string, displayName: string) => {
-    await handleAuthAction(async () => {
+    await handleAuthAction((async () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       if (user) {
@@ -114,12 +114,12 @@ export const useAuth = () => {
         );
         setProfile(newProfile);
       }
-    }());
+    })());
   };
   
     // E-posta/Şifre ile işletme hesabı kaydı
   const registerBusinessWithEmail = async (email: string, password: string, username: string, companyName: string, ownerName: string) => {
-    await handleAuthAction(async () => {
+    await handleAuthAction((async () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       if (user) {
@@ -139,12 +139,12 @@ export const useAuth = () => {
         );
         setProfile(newProfile);
       }
-    }());
+    })());
   };
 
   // Google ile giriş/kayıt
   const loginWithGoogle = async () => {
-    await handleAuthAction(async () => {
+    await handleAuthAction((async () => {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const user = userCredential.user;
       if (user) {
@@ -169,7 +169,7 @@ export const useAuth = () => {
         }
         // Mevcut kullanıcının profili zaten onAuthStateChanged'de yüklenecek
       }
-    }());
+    })());
   };
 
   // Çıkış yap
