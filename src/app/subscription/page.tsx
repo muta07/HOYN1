@@ -1,3 +1,5 @@
+'use client';
+
 // src/app/subscription/page.tsx
 export const dynamic = 'force-dynamic';
 
