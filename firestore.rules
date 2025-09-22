@@ -1,115 +1,107 @@
-// Firestore Security Rules for HOYN! Platform
-// These rules ensure that users can only access their own data
-// Deploy with: firebase deploy --only firestore:rules
+'rules_version = '2';
+  service cloud.firestore {
+    match /databases/{database}/documents {
 
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    
-    // Users collection - users can only read/write their own profile
-    match /users/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow reading basic profile info for public profiles
-      allow read: if request.auth != null && 
-                     resource.data.get('isPublic', false) == true;
-    }
-    
-    // Business profiles - similar rules but with business-specific fields
-    match /businesses/{businessId} {
-      allow read, write: if request.auth != null && request.auth.uid == businessId;
-      
-      // Allow reading business profiles (they are generally public)
-      allow read: if true;
-    }
-    
-    // Messages collection - users can read messages sent to them or by them
-    match /messages/{messageId} {
-      allow read: if request.auth != null && 
-                     (request.auth.uid == resource.data.to || 
-                      request.auth.uid == resource.data.from);
-      
-      allow create: if request.auth != null && 
-                       request.auth.uid == request.resource.data.from &&
-                       request.resource.data.keys().hasAll(['to', 'from', 'text', 'timestamp']);
-      
-      // Prevent message editing/deletion for privacy
-      allow update, delete: if false;
-    }
-    
-    // User statistics - only the user can read/write their stats
-    match /stats/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Allow incrementing counters from any authenticated user (for views/scans)
-      allow update: if request.auth != null && 
-                       request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['views', 'scans', 'clicks', 'lastUpdated']);
-                       
-      // Allow creating initial stats document for any user
-      allow create: if request.auth != null &&
-                       request.resource.data.keys().hasAll(['userId', 'scans', 'views', 'clicks']);
-    }
-    
-    // QR codes collection - users can manage their own QR codes
-    match /qrcodes/{qrId} {
-      allow read, write: if request.auth != null && 
-                            request.auth.uid == resource.data.get('userId', '');
-      
-      // Allow reading public QR codes
-      allow read: if request.auth != null && 
-                     resource.data.get('isPublic', false) == true;
-    }
-    
-    // QR modes collection - users can manage their own QR display modes
-    match /qr_modes/{userId} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-      
-      // Validate QR mode data structure
-      allow write: if request.auth != null && 
-                      request.auth.uid == userId &&
-                      request.resource.data.keys().hasAll(['mode', 'content', 'userId']) &&
-                      request.resource.data.mode in ['profile', 'note', 'song'];
-    }
-    
-    // Anonymous messages - special handling for anonymous communication
-    match /anonymous_messages/{messageId} {
-      // Allow creating anonymous messages to any user
-      allow create: if request.auth != null &&
-                       request.resource.data.keys().hasAll(['to', 'text', 'timestamp', 'anonymous']);
-      
-      // Allow reading messages sent to the authenticated user
-      allow read: if request.auth != null && 
-                     request.auth.uid == resource.data.to;
-      
-      // No updates or deletes for privacy
-      allow update, delete: if false;
-    }
-    
-    // User uploads/files - users can manage their own uploads
-    match /uploads/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // User mockups for design studio - users can manage their own mockups
-    match /user-mockups/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // User exported designs - users can manage their own exports
-    match /user-exports/{userId}/{fileName} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Public data that anyone can read (e.g., app configuration)
-    match /public/{document=**} {
-      allow read: if true;
-      allow write: if false; // Only admins can write (handled via Cloud Functions)
-    }
-    
-    // Default deny rule - explicitly deny everything else
-    match /{document=**} {
-      allow read, write: if false;
+      // ====================================================================
+      // YENİ SİSTEM İÇİN EKLENEN/GÜNCELLENEN KURALLAR
+      // ====================================================================
+
+      // YENİ: Birleşik profil sistemi (personal + business)
+      // Herkes profilleri okuyabilir, sadece sahibi yazabilir.
+      match /profiles/{profileId} {
+        allow read: if true;
+        allow write: if request.auth != null && (request.auth.uid == resource.data.ownerUid || request.auth.uid == resource.data.uid);
+      }
+
+      // GÜNCELLENDİ: Birleşik mesajlaşma sistemi (anonim + normal)
+      // Kullanıcılar sadece kendilerine gelen mesajları okuyabilir.
+      // Sadece giriş yapmış kullanıcılar mesaj oluşturabilir.
+      match /messages/{messageId} {
+        allow read: if request.auth != null && request.auth.uid == resource.data.recipientUid;
+        allow create: if request.auth != null;
+        allow update, delete: if request.auth != null && request.auth.uid == resource.data.recipientUid;
+      }
+
+      // YENİ: Tek kullanımlık QR token'ları
+      // Güvenlik için istemciden okunamaz/güncellenemez. Sadece sunucu erişir.
+      match /qrTokens/{tokenId} {
+        allow read, update, delete: if false;
+        allow create: if request.auth != null;
+      }
+
+      // ====================================================================
+      // MEVCUT SİSTEMİNİZ İÇİN KORUNAN ESKİ KURALLAR
+      // ====================================================================
+
+      // Eski 'users' koleksiyonu
+      match /users/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow read: if request.auth != null &&
+                       resource.data.get('isPublic', false) == true;
+      }
+
+      // Eski 'businesses' koleksiyonu
+      match /businesses/{businessId} {
+        allow read, write: if request.auth != null && request.auth.uid == businessId;
+        allow read: if true;
+      }
+
+      // 'stats' koleksiyonu (Güvenlik notu: Bu kural canlıya geçmeden sıkılaştırılmalı)
+      match /stats/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow update: if request.auth != null &&
+                         request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['views', 'scans', 'clicks', 'lastUpdated']);
+        allow create: if request.auth != null &&
+                         request.resource.data.keys().hasAll(['userId', 'scans', 'views', 'clicks']);
+      }
+
+      // Eski 'qrcodes' koleksiyonu
+      match /qrcodes/{qrId} {
+        allow read, write: if request.auth != null &&
+                              request.auth.uid == resource.data.get('userId', '');
+        allow read: if request.auth != null &&
+                       resource.data.get('isPublic', false) == true;
+      }
+
+      // 'qr_modes' koleksiyonu
+      match /qr_modes/{userId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+        allow write: if request.auth != null &&
+                        request.auth.uid == userId &&
+                        request.resource.data.keys().hasAll(['mode', 'content', 'userId']) &&
+                        request.resource.data.mode in ['profile', 'note', 'song'];
+      }
+
+      // Eski 'anonymous_messages' koleksiyonu (Yeni 'messages' kuralı bunun yerini alıyor)
+      // Ama olası bir çakışmayı önlemek için kuralı burada tutuyoruz.
+      match /anonymous_messages/{messageId} {
+        allow create: if request.auth != null &&
+                         request.resource.data.keys().hasAll(['to', 'text', 'timestamp', 'anonymous']);
+        allow read: if request.auth != null &&
+                       request.auth.uid == resource.data.to;
+        allow update, delete: if false;
+      }
+
+      // Diğer mevcut kurallarınız
+      match /uploads/{userId}/{fileName} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /user-mockups/{userId}/{fileName} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /user-exports/{userId}/{fileName} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+      match /public/{document=**} {
+        allow read: if true;
+        allow write: if false;
+      }
+
+      // Varsayılan olarak her şeyi reddet kuralı (ÇOK ÖNEMLİ)
+      // Bu kural her zaman en sonda olmalı.
+      match /{document=**} {
+        allow read, write: if false;
+      }
     }
   }
-}

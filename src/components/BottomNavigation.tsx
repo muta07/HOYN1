@@ -81,26 +81,7 @@ export default function BottomNavigation() {
       label: 'Profil',
       icon: '👤',
       activeIcon: '👤',
-      submenu: [
-        {
-          id: 'linktree',
-          label: 'Linktree Profil',
-          icon: '👤',
-          path: '/dashboard/linktree'
-        },
-        {
-          id: 'qr-generator',
-          label: 'QR Oluştur',
-          icon: '📱',
-          path: '/dashboard/qr-generator'
-        },
-        {
-          id: 'settings',
-          label: 'Profil Ayarları',
-          icon: '⚙️',
-          path: '/dashboard/profile'
-        }
-      ]
+      path: '/dashboard/profile'
     }
   ];
 

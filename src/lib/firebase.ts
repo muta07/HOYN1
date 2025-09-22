@@ -1,6 +1,6 @@
 // Base Profile Interface
-import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, setDoc, collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
@@ -188,7 +188,7 @@ export function generateQRPayload(profileId: string, username: string): string {
 }
 
 // Firebase başlat
-const app = initializeApp(firebaseConfig);
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Multiple Profile Functions
 export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {
@@ -252,6 +252,17 @@ export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> 
   }
 }
 
+export async function updateHOYNProfile(profileId: string, data: Partial<HOYNProfile>): Promise<boolean> {
+  try {
+    const profileRef = doc(db, 'profiles', profileId);
+    await setDoc(profileRef, { ...data, updatedAt: new Date() }, { merge: true });
+    return true;
+  } catch (error) {
+    console.error('Failed to update profile:', error);
+    return false;
+  }
+}
+
 export async function trackQRScan(scannerUid: string, targetUsername: string, qrType: string): Promise<void> {
   try {
     const scanData = {
@@ -272,5 +283,6 @@ export async function trackQRScan(scannerUid: string, targetUsername: string, qr
 // Hizmetleri dışa aktar
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export const googleProvider = new GoogleAuthProvider();
 export const database = getDatabase(app);
 export const storage = getStorage(app);

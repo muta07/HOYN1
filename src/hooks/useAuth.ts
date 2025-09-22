@@ -1,212 +1,191 @@
-// src/hooks/useAuth.ts
-import { useState, useEffect, useRef } from 'react';
-import { auth, UserProfile, BusinessProfile } from '@/lib/firebase';
-import { 
-  onAuthStateChanged, 
-  User, 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-  updateProfile
-} from 'firebase/auth';
-import { createUserProfile, getUserProfile, createBusinessProfile, getBusinessProfile } from '@/lib/qr-utils';
 
+// src/hooks/useAuth.ts
+import { useState, useEffect } from 'react';
+import {
+  onAuthStateChanged,
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  signInWithPopup,
+} from 'firebase/auth';
+import { auth, db, googleProvider, createHOYNProfile, getUserProfiles, HOYNProfile } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+
+// Bu hook, Firebase kimlik doğrulama ve kullanıcı profili yönetimini merkezileştirir.
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [profile, setProfile] = useState<UserProfile | BusinessProfile | null>(null);
+  const [profile, setProfile] = useState<HOYNProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [accountType, setAccountType] = useState<'personal' | 'business' | null>(null);
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    // Cleanup function to set isMountedRef to false when component unmounts
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      // Early return if component is unmounted
-      if (!isMountedRef.current) return;
-      
-      setUser(user);
-      
+      setLoading(true);
       if (user) {
+        setUser(user);
         try {
-          // Kullanıcı giriş yaptıysa profil bilgilerini yükle
-          // Önce business profile'a bak
-          const businessProfile = await getBusinessProfile(user.uid);
-          
-          if (!isMountedRef.current) return;
-          
-          if (businessProfile) {
-            setProfile(businessProfile);
-            setAccountType('business');
+          // Kullanıcının mevcut profillerini Firestore'dan al
+          const profiles = await getUserProfiles(user.uid);
+          if (profiles.length > 0) {
+            // Öncelikli (isPrimary) veya ilk profili ayarla
+            const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
+            setProfile(primaryProfile);
           } else {
-            // Business yoksa personal profile'a bak
-            const userProfile = await getUserProfile(user.uid);
-            
-            if (!isMountedRef.current) return;
-            
-            if (userProfile) {
-              setProfile(userProfile);
-              setAccountType(userProfile ? 'personal' : null);
-            }
+            // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
+            // Onlar için aşağıda bir profil oluşturulur.
+            setProfile(null);
           }
         } catch (err: any) {
-          if (isMountedRef.current) {
-            console.error("Error loading profile:", err);
-            setError(err.message);
-          }
-        } finally {
-          if (isMountedRef.current) {
-            setLoading(false);
-          }
+          console.error("Profil yüklenirken hata:", err);
+          setError("Profil bilgileri yüklenemedi.");
+          setProfile(null);
         }
       } else {
-        // Kullanıcı çıkış yaptıysa profili temizle
-        if (isMountedRef.current) {
-          setProfile(null);
-          setAccountType(null);
-          setLoading(false);
-        }
+        // Kullanıcı çıkış yaptı
+        setUser(null);
+        setProfile(null);
       }
+      setLoading(false);
     });
 
-    return () => {
-      unsubscribe();
-    };
+    return () => unsubscribe();
   }, []);
 
-  // Email/Password ile giriş
+  const handleAuthAction = async (action: Promise<any>) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await action;
+    } catch (error: any) {
+      console.error("Kimlik doğrulama hatası:", error.code, error.message);
+      // Firebase hata kodlarını Türkçe'ye çevir
+      let friendlyMessage = "Bir hata oluştu. Lütfen tekrar deneyin.";
+      switch (error.code) {
+        case 'auth/user-not-found':
+        case 'auth/wrong-password':
+          friendlyMessage = "E-posta veya şifre hatalı.";
+          break;
+        case 'auth/email-already-in-use':
+          friendlyMessage = "Bu e-posta adresi zaten kullanılıyor.";
+          break;
+        case 'auth/weak-password':
+          friendlyMessage = "Şifre çok zayıf. Lütfen en az 6 karakter kullanın.";
+          break;
+        case 'auth/invalid-email':
+          friendlyMessage = "Geçersiz bir e-posta adresi girdiniz.";
+          break;
+        case 'auth/popup-closed-by-user':
+          friendlyMessage = "Giriş penceresi kapatıldı. Lütfen tekrar deneyin.";
+          break;
+        default:
+          friendlyMessage = "Giriş yapılamadı. Lütfen internet bağlantınızı kontrol edin veya daha sonra tekrar deneyin.";
+      }
+      setError(friendlyMessage);
+      throw new Error(friendlyMessage);
+    } finally {
+      // onAuthStateChanged zaten setLoading(false) yapacak, ama anlık UI tepkisi için burada da ayarlanabilir.
+      setLoading(false);
+    }
+  };
+
+  // E-posta/Şifre ile giriş
   const loginWithEmail = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      return result.user;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    await handleAuthAction(signInWithEmailAndPassword(auth, email, password));
   };
 
-  // Email/Password ile kayıt
-  const registerWithEmail = async (email: string, password: string, displayName?: string, nickname?: string) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      if (displayName && result.user) {
-        await updateProfile(result.user, { displayName });
-        // Firestore'da kullanıcı profili oluştur
-        const userProfile = await createUserProfile(result.user, displayName, nickname);
-        setProfile(userProfile);
-      }
-      
-      return result.user;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Google ile giriş
-  const loginWithGoogle = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      return result.user;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Email/Password ile business kayıt
-  const registerBusinessWithEmail = async (
-    email: string, 
-    password: string, 
-    companyName: string,
-    ownerName: string,
-    nickname?: string,
-    businessType?: string,
-    address?: string,
-    phone?: string,
-    website?: string,
-    description?: string
-  ) => {
-    try {
-      setLoading(true);
-      setError(null);
-      const result = await createUserWithEmailAndPassword(auth, email, password);
-      
-      if (result.user) {
-        const displayName = `${companyName} (${ownerName})`;
-        await updateProfile(result.user, { displayName });
-        
-        // Firestore'da business profili oluştur
-        const businessProfile = await createBusinessProfile(
-          result.user, 
-          companyName, 
-          ownerName, 
-          nickname || companyName,
-          businessType || 'Diğer',
-          address,
-          phone,
-          website,
-          description
+  // E-posta/Şifre ile kişisel hesap kaydı
+  const registerWithEmail = async (email: string, password: string, username: string, displayName: string) => {
+    await handleAuthAction(async () => {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      if (user) {
+        // Firestore'da 'personal' tipinde bir HOYN profili oluştur
+        const newProfile = await createHOYNProfile(
+          user.uid,
+          {
+            email: user.email!,
+            nickname: displayName,
+            username: username,
+            type: 'personal',
+            displayName: displayName,
+          },
+          true // İlk profili birincil yap
         );
-        setProfile(businessProfile);
-        setAccountType('business');
+        setProfile(newProfile);
       }
-      
-      return result.user;
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    }());
+  };
+  
+    // E-posta/Şifre ile işletme hesabı kaydı
+  const registerBusinessWithEmail = async (email: string, password: string, username: string, companyName: string, ownerName: string) => {
+    await handleAuthAction(async () => {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      if (user) {
+        // Firestore'da 'business' tipinde bir HOYN profili oluştur
+        const newProfile = await createHOYNProfile(
+          user.uid,
+          {
+            email: user.email!,
+            nickname: companyName,
+            username: username,
+            type: 'business',
+            companyName: companyName,
+            ownerName: ownerName,
+            businessType: 'Belirtilmedi',
+          },
+          true // İlk profili birincil yap
+        );
+        setProfile(newProfile);
+      }
+    }());
+  };
+
+  // Google ile giriş/kayıt
+  const loginWithGoogle = async () => {
+    await handleAuthAction(async () => {
+      const userCredential = await signInWithPopup(auth, googleProvider);
+      const user = userCredential.user;
+      if (user) {
+        // Kullanıcının daha önce bir profili var mı diye kontrol et
+        const existingProfiles = await getUserProfiles(user.uid);
+        if (existingProfiles.length === 0) {
+          // Yeni kullanıcı: Google bilgileriyle 'personal' bir profil oluştur
+          const username = user.email!.split('@')[0]; // E-postadan varsayılan bir kullanıcı adı oluştur
+          const newProfile = await createHOYNProfile(
+            user.uid,
+            {
+              email: user.email!,
+              nickname: user.displayName || 'Yeni Kullanıcı',
+              username: username,
+              type: 'personal',
+              displayName: user.displayName || 'Yeni Kullanıcı',
+              avatar: user.photoURL || undefined,
+            },
+            true
+          );
+          setProfile(newProfile);
+        }
+        // Mevcut kullanıcının profili zaten onAuthStateChanged'de yüklenecek
+      }
+    }());
   };
 
   // Çıkış yap
   const logout = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      await signOut(auth);
-    } catch (error: any) {
-      setError(error.message);
-      throw error;
-    } finally {
-      setLoading(false);
-    }
+    await handleAuthAction(signOut(auth));
   };
 
-  return { 
-    user, 
+  return {
+    user,
     profile,
-    accountType,
-    loading, 
+    loading,
     error,
     loginWithEmail,
     registerWithEmail,
     registerBusinessWithEmail,
     loginWithGoogle,
-    logout
+    logout,
   };
 };

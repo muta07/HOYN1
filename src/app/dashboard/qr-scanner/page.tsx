@@ -1,152 +1,131 @@
-// src/app/dashboard/qr-scanner/page.tsx
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import QRScanner from '@/components/qr/QRScanner';
 import Loading from '@/components/ui/Loading';
+import NeonButton from '@/components/ui/NeonButton';
 
 export default function QRScannerPage() {
-  const { user, loading } = useAuth();
-  const [scanResults, setScanResults] = useState<string[]>([]);
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
 
-  const handleScanSuccess = (data: string) => {
-    console.log('✅ QR Scanned in page:', data);
-    setScanResults(prev => [data, ...prev.slice(0, 4)]); // Keep last 5 results
+  const [apiLoading, setApiLoading] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [apiSuccess, setApiSuccess] = useState<string | null>(null);
+
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth/login?returnUrl=/dashboard/qr-scanner');
+    }
+  }, [user, authLoading, router]);
+
+  const handleScanSuccess = async (scannedToken: string) => {
+    if (!user) {
+      setApiError('Doğrulama yapmak için giriş yapmalısınız.');
+      return;
+    }
+    
+    // Aynı QR kodun tekrar tekrar taranmasını önle
+    if (apiLoading) return;
+
+    setApiLoading(true);
+    setApiError(null);
+    setApiSuccess(null);
+
+    try {
+      const idToken = await user.getIdToken();
+
+      const response = await fetch('/api/qr/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`,
+        },
+        body: JSON.stringify({ token: scannedToken }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'QR Kod doğrulanamadı.');
+      }
+
+      setApiSuccess(`Doğrulama başarılı! ${result.generatorUsername} profiline yönlendiriliyorsunuz...`);
+
+      // Yönlendirme için kısa bir gecikme
+      setTimeout(() => {
+        router.push(`/u/${result.generatorUsername}`);
+      }, 2000);
+
+    } catch (err: any) {
+      setApiError(err.message);
+      console.error('QR verification error:', err);
+    } finally {
+      // Hata durumunda yüklenme durumunu hemen kaldır, başarı durumunda yönlendirme olacağı için gerek yok
+      if (apiError) {
+        setApiLoading(false);
+      }
+    }
   };
 
   const handleScanError = (error: Error) => {
-    console.error('❌ QR Scan error in page:', error);
+    setApiError(`Tarama Hatası: ${error.message}. Lütfen kamera iznini kontrol edin.`);
+    console.error('QR Scan error in page:', error);
   };
 
-  // Loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loading size="lg" text="QR Scanner yükleniyor..." />
-      </div>
-    );
-  }
-
-  // Not authenticated - redirect handled by middleware
-  if (!user) {
-    return null;
+  if (authLoading) {
+    return <div className="min-h-screen bg-black flex items-center justify-center"><Loading size="lg" text="Tarayıcı hazırlanıyor..." /></div>;
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-blue-900 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
+      <div className="max-w-2xl mx-auto">
         <div className="text-center mb-8">
           <h1 className="text-5xl font-bold text-white mb-4 glow-text">
-            📱 QR <span className="text-purple-400">Tarayıcı</span>
+            📱 QR <span className="text-purple-400">Doğrulama</span>
           </h1>
-          <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-            HOYN! QR kodlarını ve diğer QR kodlarını hızlıca tarayın. 
-            Kamera, flaş ve webview desteği ile her ortamda çalışır.
+          <p className="text-xl text-gray-300">
+            Bir HOYN tek kullanımlık QR kodunu tarayın.
           </p>
         </div>
 
-        {/* Scanner Component */}
-        <QRScanner
-          className="mb-8"
-          onScanSuccess={handleScanSuccess}
-          onScanError={handleScanError}
-        />
-
-        {/* Additional Info Section */}
-        <div className="glass-effect p-6 rounded-xl cyber-border max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-white mb-4 glow-text">🌟 Özellikler</h2>
-          
-          <div className="grid md:grid-cols-2 gap-6 text-gray-300">
-            <div>
-              <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
-                <span>🎯</span>
-                HOYN! QR Desteği
-              </h3>
-              <ul className="text-sm space-y-1">
-                <li>• Profil QR kodları</li>
-                <li>• Anonim mesaj QR kodları</li>
-                <li>• Özel HOYN! QR kodları</li>
-                <li>• Otomatik format tanıma</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
-                <span>⚡</span>
-                Gelişmiş Özellikler
-              </h3>
-              <ul className="text-sm space-y-1">
-                <li>• Flaş ışığı desteği</li>
-                <li>• Tarama geçmişi</li>
-                <li>• WebView uyumluluğu</li>
-                <li>• Hızlı kopyalama</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
-                <span>📱</span>
-                Platform Desteği
-              </h3>
-              <ul className="text-sm space-y-1">
-                <li>• Chrome, Safari, Edge</li>
-                <li>• WhatsApp WebView</li>
-                <li>• Instagram Tarayıcı</li>
-                <li>• Telegram WebView</li>
-              </ul>
-            </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-2 flex items-center gap-2">
-                <span>🔒</span>
-                Güvenlik & Gizlilik
-              </h3>
-              <ul className="text-sm space-y-1">
-                <li>• Kamera erişimi güvenli</li>
-                <li>• Veriler cihazda kalır</li>
-                <li>• HTTPS şifreli bağlantı</li>
-                <li>• İzin tabanlı erişim</li>
-              </ul>
-            </div>
-          </div>
+        <div className="glass-effect p-4 sm:p-6 rounded-2xl cyber-border">
+            <QRScanner
+              onScanSuccess={handleScanSuccess}
+              onScanError={handleScanError}
+              paused={apiLoading || !!apiSuccess} // API işlemi sırasında veya başarı sonrası tarayıcıyı duraklat
+            />
         </div>
 
-        {/* Help Section */}
-        <div className="glass-effect p-6 rounded-xl cyber-border max-w-4xl mx-auto mt-6">
-          <h2 className="text-2xl font-bold text-white mb-4 glow-text">❓ Sorun Giderme</h2>
+        {/* API Durum Bildirimleri */}
+        <div className="mt-6 text-center h-24 flex items-center justify-center">
+          {apiLoading && <Loading text="QR Kod doğrulanıyor..." />}
           
-          <div className="space-y-4 text-gray-300">
-            <div>
-              <h3 className="font-bold text-purple-300 mb-1">Kamera çalışmıyor?</h3>
-              <p className="text-sm">
-                Tarayıcı ayarlarından kamera iznini kontrol edin. HTTPS bağlantı gereklidir.
-              </p>
+          {apiError && (
+            <div className="w-full bg-red-900/30 border border-red-500 text-red-300 p-4 rounded-lg">
+              <p className="font-bold mb-1">Doğrulama Başarısız</p>
+              <p className="text-sm">{apiError}</p>
             </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-1">QR kodu tanımıyor?</h3>
-              <p className="text-sm">
-                QR kodun temiz ve düzgün olduğundan emin olun. Mesafeyi ayarlayın ve flaşı deneyin.
-              </p>
+          )}
+
+          {apiSuccess && (
+            <div className="w-full bg-green-900/30 border border-green-500 text-green-300 p-4 rounded-lg">
+              <p className="font-bold mb-1">Başarılı!</p>
+              <p className="text-sm">{apiSuccess}</p>
             </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-1">WhatsApp'ta çalışmıyor?</h3>
-              <p className="text-sm">
-                WhatsApp içinde "Tarayıcıda aç" seçeneğini kullanın veya doğrudan Chrome/Safari'de açın.
-              </p>
-            </div>
-            
-            <div>
-              <h3 className="font-bold text-purple-300 mb-1">Flaş açılmıyor?</h3>
-              <p className="text-sm">
-                Bazı cihazlarda flaş desteği bulunmaz. Ortamı aydınlatmayı deneyin.
-              </p>
-            </div>
-          </div>
+          )}
         </div>
+
+        <div className="text-center mt-4">
+            <NeonButton onClick={() => router.push('/dashboard')} variant='outline'>
+                Panele Dön
+            </NeonButton>
+        </div>
+
       </div>
     </div>
   );
