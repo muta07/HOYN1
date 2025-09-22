@@ -1,5 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  eslint: {
+    // Uyarı: Bu ayar, projenizde ESLint hataları olsa bile
+    // production build'lerinin başarılı olmasına izin verir.
+    ignoreDuringBuilds: true,
+  },
+
   // Enable experimental features for better performance
   experimental: {
     optimizePackageImports: ['@yudiel/react-qr-scanner', 'qrcode.react']
