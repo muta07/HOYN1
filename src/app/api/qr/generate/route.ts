@@ -9,6 +9,12 @@ import { v4 as uuidv4 } from 'uuid';
 
 export async function POST() {
   try {
+    // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
+    if (!auth) {
+      console.error('Firebase Admin is not initialized');
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     // 1. Kullanıcının kimliğini doğrula
     const authorization = headers().get('Authorization');
     if (!authorization?.startsWith('Bearer ')) {
