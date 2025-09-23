@@ -15,7 +15,7 @@ export interface QRData {
 /**
  * Gets user display name with nickname priority (supports both user and business)
  */
-export function getUserDisplayName(user: User | null, profile?: UserProfile | BusinessProfile | null): string {
+export function getUserDisplayName(user: User | null, profile?: UserProfile | BusinessProfile | HOYNProfile | null): string {
   if (!user) return 'kullanıcı';
   
   // Önce profile'dan nickname'e bak
