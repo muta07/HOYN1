@@ -331,11 +331,19 @@ export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> 
     // firestore nesnesi firebase-admin.ts dosyasında tanımlı
     // Bu nedenle doğrudan db nesnesini kullanabiliriz
     console.log('Attempting to fetch profiles from Firestore');
+    
+    // Kullanıcının kendi profillerini çek
+    // ownerUid'ye göre sorgulamak yerine, tüm profilleri çekip sonra filtrele
     const profilesRef = collection(db, 'profiles');
-    const q = query(profilesRef, where('ownerUid', '==', ownerUid), where('isActive', '==', true));
-    const snapshot = await getDocs(q);
-    console.log('Successfully fetched profiles, count:', snapshot.docs.length);
-    return snapshot.docs.map(doc => ({ ...doc.data() as HOYNProfile, id: doc.id }));
+    const snapshot = await getDocs(profilesRef);
+    
+    // Sadece ownerUid'si eşleşen ve aktif olan profilleri filtrele
+    const profiles = snapshot.docs
+      .map(doc => ({ ...doc.data() as HOYNProfile, id: doc.id }))
+      .filter(profile => profile.ownerUid === ownerUid && profile.isActive === true);
+      
+    console.log('Successfully fetched profiles, count:', profiles.length);
+    return profiles;
   } catch (error: any) {
     console.error('Failed to get user profiles:', error);
     // Yetki hatası durumunda kullanıcıya özel bir mesaj göster
