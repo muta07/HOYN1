@@ -7,33 +7,22 @@ import { Firestore } from 'firebase-admin/firestore';
 if (!admin.apps.length) {
   try {
     // Vercel'de ortam değişkenleri düz metin olarak ayarlanabilir
-    // veya base64 olarak kodlanmış olabilir
-    let serviceAccount;
-    
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       try {
-        // Önce düz JSON olarak parse etmeyi dene
-        serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      } catch {
-        // Eğer başarısız olursa, base64 decode etmeyi dene
-        try {
-          const serviceAccountJson = Buffer.from(
-            process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-            'base64'
-          ).toString('utf-8');
-          serviceAccount = JSON.parse(serviceAccountJson);
-        } catch (decodeError) {
-          console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON or base64');
-          throw decodeError;
-        }
+        // Düz JSON olarak parse et
+        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccount),
+          // Eğer Realtime Database kullanıyorsanız, databaseURL'i buraya ekleyin
+          // databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
+        });
+        console.log('Firebase Admin SDK initialized successfully.');
+      } catch (parseError) {
+        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON');
+        console.error('Parse error:', parseError);
+        throw parseError;
       }
-      
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
-        // Eğer Realtime Database kullanıyorsanız, databaseURL'i buraya ekleyin
-        // databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
-      });
-      console.log('Firebase Admin SDK initialized successfully.');
     } else {
       console.warn('FIREBASE_SERVICE_ACCOUNT_KEY environment variable is not set. Firebase Admin SDK will not be initialized.');
     }
