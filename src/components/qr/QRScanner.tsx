@@ -13,6 +13,7 @@ interface QRScannerProps {
   className?: string;
   onScanSuccess?: (data: string) => void;
   onScanError?: (error: Error) => void;
+  paused?: boolean;
 }
 
 interface ScanResult {
@@ -23,7 +24,7 @@ interface ScanResult {
   type: 'profile' | 'anonymous' | 'custom' | 'url' | 'other';
 }
 
-export default function QRScanner({ className = '', onScanSuccess, onScanError }: QRScannerProps) {
+export default function QRScanner({ className = '', onScanSuccess, onScanError, paused = false }: QRScannerProps) {
   const router = useRouter();
   const [isScanning, setIsScanning] = useState(false);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -511,6 +512,7 @@ export default function QRScanner({ className = '', onScanSuccess, onScanError }
                 <Scanner
                   onScan={handleScanSuccess}
                   onError={handleScanError}
+                  paused={paused}
                   formats={['qr_code', 'micro_qr_code']}
                   constraints={{
                     facingMode: 'environment',
