@@ -13,7 +13,9 @@ export default function DashboardPage() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log('Dashboard useEffect triggered, user:', user, 'loading:', loading);
     if (!loading && !user) {
+      console.log('User not authenticated, redirecting to home');
       router.push('/');
     }
   }, [user, loading, router]);

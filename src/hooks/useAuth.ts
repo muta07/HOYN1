@@ -20,7 +20,9 @@ export const useAuth = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('useAuth useEffect triggered');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('onAuthStateChanged triggered, user:', user);
       setLoading(true);
       if (user) {
         setUser(user);
@@ -28,14 +30,18 @@ export const useAuth = () => {
           // Kullanıcının mevcut profillerini Firestore'dan al
           // Kullanıcı oturum açmış mı ve uid geçerli mi kontrol et
           if (user.uid) {
+            console.log('User is authenticated, fetching profiles for UID:', user.uid);
             const profiles = await getUserProfiles(user.uid);
+            console.log('Profiles fetched:', profiles);
             if (profiles.length > 0) {
               // Öncelikli (isPrimary) veya ilk profili ayarla
               const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
+              console.log('Setting primary profile:', primaryProfile);
               setProfile(primaryProfile);
             } else {
               // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
               // Onlar için aşağıda bir profil oluşturulur.
+              console.log('No profiles found for user');
               setProfile(null);
             }
           } else {
@@ -49,13 +55,17 @@ export const useAuth = () => {
         }
       } else {
         // Kullanıcı çıkış yaptı
+        console.log('User is not authenticated');
         setUser(null);
         setProfile(null);
       }
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      console.log('useAuth useEffect cleanup');
+      unsubscribe();
+    };
   }, []);
 
   const handleAuthAction = async (action: Promise<any>) => {
