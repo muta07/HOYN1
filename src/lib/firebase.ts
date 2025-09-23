@@ -268,7 +268,7 @@ export function generateQRPayload(profileId: string, username: string): string {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 // Multiple Profile Functions
-export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {
+export async function createHOYNProfile(ownerUid: string, profileData: Omit<HOYNProfile, 'id' | 'ownerUid' | 'qrData' | 'isActive' | 'isPrimary' | 'uid' | 'createdAt' | 'updatedAt'> & { username: string; type: 'personal' | 'business' }, isPrimary: boolean = false): Promise<HOYNProfile | null> {
   try {
     const profileId = `${profileData.username}-${Date.now()}`;
     const profileRef = doc(db, 'profiles', profileId);
