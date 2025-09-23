@@ -1,6 +1,7 @@
 
 // src/lib/firebase-admin.ts
 import * as admin from 'firebase-admin';
+import { Firestore } from 'firebase-admin/firestore';
 
 // Projenin zaten başlatılıp başlatılmadığını kontrol et
 if (!admin.apps.length) {
@@ -45,6 +46,6 @@ if (!admin.apps.length) {
 // Firebase Admin servislerini dışa aktar
 // Firebase başlatılmadıysa, servisleri başlatmadan dışa aktar
 const auth = admin.apps.length > 0 ? admin.auth() : null;
-const firestore = admin.apps.length > 0 ? admin.firestore() : null;
+const firestore: Firestore | null = admin.apps.length > 0 ? admin.firestore() : null;
 
 export { auth, firestore };

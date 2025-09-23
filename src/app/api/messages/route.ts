@@ -25,7 +25,7 @@ export async function GET(request: Request) {
         const recipientUid = decodedToken.uid;
 
         // 2. Firestore'dan mesajları al
-        const messagesRef = collection(firestore, 'messages');
+        const messagesRef = collection(firestore as any, 'messages');
         const q = query(
             messagesRef, 
             where('recipientUid', '==', recipientUid),
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
 
         // 2. Alıcının UID'sini kullanıcı adına göre bul
         // Önce Firestore'daki 'profiles' koleksiyonundan username ile arama yap
-        const profilesRef = collection(firestore, 'profiles');
+        const profilesRef = collection(firestore as any, 'profiles');
         const q = query(profilesRef, where('username', '==', recipientUsername));
         const profileSnapshot = await getDocs(q);
 
@@ -101,7 +101,7 @@ export async function POST(request: Request) {
             timestamp: serverTimestamp(),
         }
 
-        await addDoc(collection(firestore, 'messages'), messageData);
+        await addDoc(collection(firestore as any, 'messages'), messageData);
 
         return NextResponse.json({ success: true, message: 'Message sent successfully!' });
 
