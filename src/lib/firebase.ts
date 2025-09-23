@@ -319,12 +319,22 @@ export async function getHOYNProfileByUsername(username: string): Promise<HOYNPr
 
 export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> {
   try {
-    const profilesRef = collection(db, 'profiles');
+    // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
+    if (!firestore) {
+      console.error('Firebase Admin is not initialized');
+      return [];
+    }
+
+    const profilesRef = collection(firestore, 'profiles');
     const q = query(profilesRef, where('ownerUid', '==', ownerUid), where('isActive', '==', true));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ ...doc.data() as HOYNProfile, id: doc.id }));
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to get user profiles:', error);
+    // Yetki hatası durumunda kullanıcıya özel bir mesaj göster
+    if (error.code === 'permission-denied') {
+      console.error('Permission denied when fetching user profiles. Check Firestore rules.');
+    }
     return [];
   }
 }

@@ -26,14 +26,19 @@ export const useAuth = () => {
         setUser(user);
         try {
           // Kullanıcının mevcut profillerini Firestore'dan al
-          const profiles = await getUserProfiles(user.uid);
-          if (profiles.length > 0) {
-            // Öncelikli (isPrimary) veya ilk profili ayarla
-            const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
-            setProfile(primaryProfile);
+          // Kullanıcı oturum açmış mı kontrol et
+          if (user.uid) {
+            const profiles = await getUserProfiles(user.uid);
+            if (profiles.length > 0) {
+              // Öncelikli (isPrimary) veya ilk profili ayarla
+              const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
+              setProfile(primaryProfile);
+            } else {
+              // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
+              // Onlar için aşağıda bir profil oluşturulur.
+              setProfile(null);
+            }
           } else {
-            // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
-            // Onlar için aşağıda bir profil oluşturulur.
             setProfile(null);
           }
         } catch (err: any) {
