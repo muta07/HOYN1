@@ -14,16 +14,15 @@ export default function DashboardPage() {
 
   useEffect(() => {
     console.log('Dashboard useEffect triggered, user:', user, 'loading:', loading, 'needsProfileSetup:', needsProfileSetup);
-    if (!loading && !user) {
-      console.log('User not authenticated, redirecting to home');
-      router.push('/');
-    }
-    // Kullanıcı profili yoksa profil oluşturma sayfasına yönlendir
+  }, [user, loading, needsProfileSetup, router, profile]);
+
+  useEffect(() => {
+    console.log('Dashboard needsProfileSetup changed:', needsProfileSetup);
     if (!loading && user && needsProfileSetup) {
       console.log('User needs profile setup, redirecting to profile creation');
       router.push('/auth/setup-profile');
     }
-  }, [user, loading, needsProfileSetup, router, profile]);
+  }, [needsProfileSetup]);
 
   const handleLogout = async () => {
     try {
