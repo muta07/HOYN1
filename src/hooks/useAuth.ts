@@ -182,6 +182,7 @@ export const useAuth = () => {
     profile,
     loading,
     error,
+    accountType: profile?.type,
     loginWithEmail,
     registerWithEmail,
     registerBusinessWithEmail,
