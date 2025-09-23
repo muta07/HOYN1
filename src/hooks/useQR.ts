@@ -4,7 +4,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { User } from 'firebase/auth';
 import { getUserDisplayName, getUserUsername, generateHOYNQR, generateHOYNQRWithMode } from '@/lib/qr-utils';
-import { UserProfile, BusinessProfile } from '@/lib/firebase';
+import { UserProfile, BusinessProfile, HOYNProfile } from '@/lib/firebase';
 
 export type QRType = 'profile' | 'anonymous' | 'custom';
 
