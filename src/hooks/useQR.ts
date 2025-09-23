@@ -60,7 +60,7 @@ const defaultState: QRState = {
 
 export function useQR(
   user: User | null, 
-  profile?: UserProfile | BusinessProfile | null
+  profile?: UserProfile | BusinessProfile | HOYNProfile | null
 ): UseQRReturn {
   const [qrState, setQrState] = useState<QRState>(defaultState);
 
