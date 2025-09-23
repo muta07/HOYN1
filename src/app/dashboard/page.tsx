@@ -23,7 +23,7 @@ export default function DashboardPage() {
       console.log('User needs profile setup, redirecting to profile creation');
       router.push('/auth/setup-profile');
     }
-  }, [user, loading, needsProfileSetup, router]);
+  }, [user, loading, needsProfileSetup, router, profile]);
 
   const handleLogout = async () => {
     try {

@@ -39,12 +39,14 @@ export const useAuth = () => {
               const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
               console.log('Setting primary profile:', primaryProfile);
               setProfile(primaryProfile);
+              console.log('Setting needsProfileSetup to false');
               setNeedsProfileSetup(false);
             } else {
               // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
               // Onlar için aşağıda bir profil oluşturulur.
               console.log('No profiles found for user');
               setProfile(null);
+              console.log('Setting needsProfileSetup to true');
               setNeedsProfileSetup(true);
             }
           } else {
