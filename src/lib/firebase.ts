@@ -320,12 +320,9 @@ export async function getHOYNProfileByUsername(username: string): Promise<HOYNPr
 export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> {
   try {
     // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
-    if (!firestore) {
-      console.error('Firebase Admin is not initialized');
-      return [];
-    }
-
-    const profilesRef = collection(firestore, 'profiles');
+    // firestore nesnesi firebase-admin.ts dosyasında tanımlı
+    // Bu nedenle doğrudan db nesnesini kullanabiliriz
+    const profilesRef = collection(db, 'profiles');
     const q = query(profilesRef, where('ownerUid', '==', ownerUid), where('isActive', '==', true));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ ...doc.data() as HOYNProfile, id: doc.id }));
