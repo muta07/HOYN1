@@ -1,7 +1,7 @@
 
 // src/app/api/messages/route.ts
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/firebase-admin';
+import { auth, firestore } from '@/lib/firebase-admin';
 import { db } from '@/lib/firebase';
 import { collection, addDoc, query, where, getDocs, serverTimestamp, orderBy } from 'firebase/firestore';
 import { headers } from 'next/headers';
@@ -9,6 +9,12 @@ import { headers } from 'next/headers';
 // GET: Kullanıcının aldığı mesajları listeler
 export async function GET(request: Request) {
     try {
+        // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
+        if (!auth || !firestore) {
+            console.error('Firebase Admin is not initialized');
+            return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+        }
+
         // 1. Kullanıcı kimliğini doğrula
         const authorization = headers().get('Authorization');
         if (!authorization?.startsWith('Bearer ')) {
@@ -19,7 +25,7 @@ export async function GET(request: Request) {
         const recipientUid = decodedToken.uid;
 
         // 2. Firestore'dan mesajları al
-        const messagesRef = collection(db, 'messages');
+        const messagesRef = collection(firestore, 'messages');
         const q = query(
             messagesRef, 
             where('recipientUid', '==', recipientUid),
@@ -45,6 +51,12 @@ export async function GET(request: Request) {
 // POST: Yeni bir mesaj gönderir (hem normal hem anonim)
 export async function POST(request: Request) {
     try {
+        // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
+        if (!auth || !firestore) {
+            console.error('Firebase Admin is not initialized');
+            return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+        }
+
         const { recipientUsername, content, isAnonymous } = await request.json();
 
         if (!recipientUsername || !content) {
@@ -67,9 +79,8 @@ export async function POST(request: Request) {
         }
 
         // 2. Alıcının UID'sini kullanıcı adına göre bul
-        const userRecord = await auth.getUserByEmail(`${recipientUsername}@hoyn.app`); // Bu kısım sizin kullanıcı adı yapınıza göre değişebilir.
-        // Alternatif: Firestore'daki 'profiles' koleksiyonundan username ile arama yapın.
-        const profilesRef = collection(db, 'profiles');
+        // Önce Firestore'daki 'profiles' koleksiyonundan username ile arama yap
+        const profilesRef = collection(firestore, 'profiles');
         const q = query(profilesRef, where('username', '==', recipientUsername));
         const profileSnapshot = await getDocs(q);
 
@@ -88,9 +99,9 @@ export async function POST(request: Request) {
             isAnonymous,
             isRead: false,
             timestamp: serverTimestamp(),
-        };
+        }
 
-        await addDoc(collection(db, 'messages'), messageData);
+        await addDoc(collection(firestore, 'messages'), messageData);
 
         return NextResponse.json({ success: true, message: 'Message sent successfully!' });
 
