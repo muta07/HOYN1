@@ -54,23 +54,22 @@ export default function ProfileCustomizationPage() {
   // Load existing customization
   useEffect(() => {
     if (user && profile) {
-      const userProfile = profile as UserProfile;
-      if (userProfile.profileCustomization) {
+      if (profile.profileCustomization) {
         setCustomization({
-          theme: userProfile.profileCustomization.theme || 'cyberpunk',
-          primaryColor: userProfile.profileCustomization.primaryColor || '#E040FB',
-          secondaryColor: userProfile.profileCustomization.secondaryColor || '#651FFF',
-          backgroundColor: userProfile.profileCustomization.backgroundColor || '#000000',
-          textColor: userProfile.profileCustomization.textColor || '#FFFFFF',
-          accentColor: userProfile.profileCustomization.accentColor || '#00BCD4',
-          fontFamily: userProfile.profileCustomization.fontFamily || 'orbitron',
-          borderStyle: userProfile.profileCustomization.borderStyle || 'cyber',
-          animationStyle: userProfile.profileCustomization.animationStyle || 'dynamic',
-          customCSS: userProfile.profileCustomization.customCSS || '',
-          useGradient: userProfile.profileCustomization.useGradient ?? true,
-          gradientDirection: userProfile.profileCustomization.gradientDirection || 'to-br',
-          profileLayout: userProfile.profileCustomization.profileLayout || 'standard',
-          showCustomization: userProfile.profileCustomization.showCustomization ?? true
+          theme: profile.profileCustomization.theme || 'cyberpunk',
+          primaryColor: profile.profileCustomization.primaryColor || '#E040FB',
+          secondaryColor: profile.profileCustomization.secondaryColor || '#651FFF',
+          backgroundColor: profile.profileCustomization.backgroundColor || '#000000',
+          textColor: profile.profileCustomization.textColor || '#FFFFFF',
+          accentColor: profile.profileCustomization.accentColor || '#00BCD4',
+          fontFamily: profile.profileCustomization.fontFamily || 'orbitron',
+          borderStyle: profile.profileCustomization.borderStyle || 'cyber',
+          animationStyle: profile.profileCustomization.animationStyle || 'dynamic',
+          customCSS: profile.profileCustomization.customCSS || '',
+          useGradient: profile.profileCustomization.useGradient ?? true,
+          gradientDirection: profile.profileCustomization.gradientDirection || 'to-br',
+          profileLayout: profile.profileCustomization.profileLayout || 'standard',
+          showCustomization: profile.profileCustomization.showCustomization ?? true
         });
       }
     }
@@ -102,11 +101,11 @@ export default function ProfileCustomizationPage() {
   };
 
   const handleSave = async () => {
-    if (!user) return;
+    if (!user || !profile) return;
     setLoading(true);
     try {
-      const userRef = doc(db, 'users', user.uid);
-      await updateDoc(userRef, {
+      const profileRef = doc(db, 'profiles', profile.id);
+      await updateDoc(profileRef, {
         profileCustomization: customization,
         updatedAt: new Date()
       });

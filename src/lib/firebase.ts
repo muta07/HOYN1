@@ -32,6 +32,83 @@ export interface HOYNProfile extends BaseProfile {
   };
   isActive: boolean;
   isPrimary: boolean;
+
+  // UserProfile fields
+  displayName?: string;
+  bio?: string;
+  instagram?: string;
+  twitter?: string;
+  allowAnonymous?: boolean;
+  profileCustomization?: {
+    theme?: 'cyberpunk' | 'neon' | 'minimal' | 'dark' | 'colorful' | 'retro';
+    primaryColor?: string;
+    secondaryColor?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    accentColor?: string;
+    fontFamily?: 'orbitron' | 'roboto' | 'inter' | 'poppins' | 'jetbrains';
+    borderStyle?: 'sharp' | 'rounded' | 'cyber' | 'minimal';
+    animationStyle?: 'none' | 'subtle' | 'dynamic' | 'intense';
+    customCSS?: string;
+    backgroundImage?: string;
+    useGradient?: boolean;
+    gradientDirection?: 'to-r' | 'to-l' | 'to-t' | 'to-b' | 'to-br' | 'to-bl' | 'to-tr' | 'to-tl';
+    profileLayout?: 'standard' | 'compact' | 'detailed' | 'creative';
+    showCustomization?: boolean;
+  };
+
+  // BusinessProfile fields
+  companyName?: string;
+  ownerName?: string;
+  businessType?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  description?: string;
+  employees?: string[];
+  menuItems?: any[];
+  qrCodes?: string[];
+  isVerified?: boolean;
+  sector?: string;
+  foundedYear?: number;
+  employeeCount?: string;
+  services?: string[];
+  workingHours?: {
+    monday?: string;
+    tuesday?: string;
+    wednesday?: string;
+    thursday?: string;
+    friday?: string;
+    saturday?: string;
+    sunday?: string;
+  };
+  socialMedia?: {
+    instagram?: string;
+    facebook?: string;
+    twitter?: string;
+    linkedin?: string;
+    youtube?: string;
+  };
+  contactInfo?: {
+    whatsapp?: string;
+    telegram?: string;
+    email2?: string;
+    fax?: string;
+  };
+  location?: {
+    latitude?: number;
+    longitude?: number;
+    city?: string;
+    district?: string;
+    country?: string;
+  };
+  businessSettings?: {
+    showEmployeeCount?: boolean;
+    showFoundedYear?: boolean;
+    showWorkingHours?: boolean;
+    allowDirectMessages?: boolean;
+    showLocation?: boolean;
+  };
 }
 
 export type ProfileType = UserProfile | BusinessProfile | HOYNProfile;
