@@ -8,6 +8,12 @@ import { headers } from 'next/headers';
 
 export async function POST(request: Request) {
   try {
+    // Firebase Admin'in başlatılıp başlatılmadığını kontrol et
+    if (!auth) {
+      console.error('Firebase Admin is not initialized');
+      return NextResponse.json({ error: 'Service unavailable' }, { status: 503 });
+    }
+
     // 1. Taramayı yapan kullanıcının kimliğini doğrula
     const authorization = headers().get('Authorization');
     if (!authorization?.startsWith('Bearer ')) {
