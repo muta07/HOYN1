@@ -6,11 +6,14 @@ import { Firestore } from 'firebase-admin/firestore';
 // Projenin zaten başlatılıp başlatılmadığını kontrol et
 if (!admin.apps.length) {
   try {
-    // Vercel'de ortam değişkenleri düz metin olarak ayarlanabilir
+    // Vercel'de ortam değişkenleri base64 olarak ayarlanabilir
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       try {
-        // Düz JSON olarak parse et
-        const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
+        // Base64 decode et ve JSON olarak parse et
+        const base64Key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
+        const buff = Buffer.from(base64Key, 'base64');
+        const serviceAccountString = buff.toString('utf-8');
+        const serviceAccount = JSON.parse(serviceAccountString);
         
         admin.initializeApp({
           credential: admin.credential.cert(serviceAccount),
@@ -19,7 +22,7 @@ if (!admin.apps.length) {
         });
         console.log('Firebase Admin SDK initialized successfully.');
       } catch (parseError) {
-        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY as JSON');
+        console.error('Failed to parse FIREBASE_SERVICE_ACCOUNT_KEY');
         console.error('Parse error:', parseError);
         throw parseError;
       }
