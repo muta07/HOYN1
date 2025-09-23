@@ -127,7 +127,7 @@ export default function ProfilePage() {
     return <div className="min-h-screen bg-black flex items-center justify-center"><Loading size="lg" text="Profil yükleniyor..." /></div>;
   }
 
-  if (!profile) {
+  if (!user || !profile) {
      return <div className="min-h-screen bg-black flex items-center justify-center text-white">Profil bulunamadı veya yüklenemedi. {authError}</div>;
   }
 
