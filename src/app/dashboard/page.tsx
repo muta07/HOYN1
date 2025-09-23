@@ -9,6 +9,7 @@ import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
 export default function DashboardPage() {
+  console.log('DashboardPage component rendering');
   const { user, profile, accountType, loading, logout, needsProfileSetup } = useAuth();
   const router = useRouter();
 

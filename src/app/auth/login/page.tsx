@@ -18,7 +18,9 @@ function LoginForm() {
   // Eğer zaten giriş yapmışsa yönlendir
   useEffect(() => {
     if (user && !loading) {
-      router.push(returnUrl);
+      // Kullanıcı profili yoksa doğrudan setup-profile sayfasına yönlendir
+      // Aksi halde dashboard'a yönlendir
+      router.push('/dashboard');
     }
   }, [user, loading, router, returnUrl]);
 
