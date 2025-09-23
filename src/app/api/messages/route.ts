@@ -21,7 +21,15 @@ export async function GET(request: Request) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
         const idToken = authorization.split('Bearer ')[1];
-        const decodedToken = await auth.verifyIdToken(idToken);
+        
+        let decodedToken;
+        try {
+            decodedToken = await auth.verifyIdToken(idToken);
+        } catch (error) {
+            console.error('Error verifying token:', error);
+            return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+        }
+        
         const recipientUid = decodedToken.uid;
 
         // 2. Firestore'dan mesajları al
@@ -42,7 +50,7 @@ export async function GET(request: Request) {
 
         return NextResponse.json(messages);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('Error fetching messages:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
@@ -73,7 +81,15 @@ export async function POST(request: Request) {
                 return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
             }
             const idToken = authorization.split('Bearer ')[1];
-            const decodedToken = await auth.verifyIdToken(idToken);
+            
+            let decodedToken;
+            try {
+                decodedToken = await auth.verifyIdToken(idToken);
+            } catch (error) {
+                console.error('Error verifying token:', error);
+                return NextResponse.json({ error: 'Unauthorized: Invalid token' }, { status: 401 });
+            }
+            
             senderUid = decodedToken.uid;
             senderDisplayName = decodedToken.name || decodedToken.email || 'Kullanıcı';
         }

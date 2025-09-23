@@ -93,7 +93,7 @@ export async function POST(request: Request) {
       generatorUsername: generatorUsername, // Frontend'in profile yönlendirmesi için
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error verifying QR token:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

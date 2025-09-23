@@ -58,7 +58,7 @@ export async function POST() {
       tokenId: docRef.id,
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error generating QR token:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
