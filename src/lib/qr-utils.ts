@@ -2,7 +2,7 @@
 // @ts-ignore - DOMPurify types
 import DOMPurify from 'isomorphic-dompurify';
 import { User } from 'firebase/auth';
-import { UserProfile, BusinessProfile, db } from './firebase';
+import { UserProfile, BusinessProfile, HOYNProfile, db } from './firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export interface QRData {
