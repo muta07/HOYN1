@@ -26,7 +26,7 @@ export const useAuth = () => {
         setUser(user);
         try {
           // Kullanıcının mevcut profillerini Firestore'dan al
-          // Kullanıcı oturum açmış mı kontrol et
+          // Kullanıcı oturum açmış mı ve uid geçerli mi kontrol et
           if (user.uid) {
             const profiles = await getUserProfiles(user.uid);
             if (profiles.length > 0) {
@@ -39,6 +39,7 @@ export const useAuth = () => {
               setProfile(null);
             }
           } else {
+            console.error("User UID is missing");
             setProfile(null);
           }
         } catch (err: any) {

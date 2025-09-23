@@ -329,7 +329,7 @@ export async function getUserProfiles(ownerUid: string): Promise<HOYNProfile[]> 
   } catch (error: any) {
     console.error('Failed to get user profiles:', error);
     // Yetki hatası durumunda kullanıcıya özel bir mesaj göster
-    if (error.code === 'permission-denied') {
+    if (error.code === 'permission-denied' || error.message.includes('Missing or insufficient permissions')) {
       console.error('Permission denied when fetching user profiles. Check Firestore rules.');
     }
     return [];
