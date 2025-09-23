@@ -18,6 +18,7 @@ export const useAuth = () => {
   const [profile, setProfile] = useState<HOYNProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [needsProfileSetup, setNeedsProfileSetup] = useState(false);
 
   useEffect(() => {
     console.log('useAuth useEffect triggered');
@@ -38,15 +39,18 @@ export const useAuth = () => {
               const primaryProfile = profiles.find(p => p.isPrimary) || profiles[0];
               console.log('Setting primary profile:', primaryProfile);
               setProfile(primaryProfile);
+              setNeedsProfileSetup(false);
             } else {
               // Bu durum genellikle Google ile ilk kez giriş yapanlar için oluşur.
               // Onlar için aşağıda bir profil oluşturulur.
               console.log('No profiles found for user');
               setProfile(null);
+              setNeedsProfileSetup(true);
             }
           } else {
             console.error("User UID is missing");
             setProfile(null);
+            setNeedsProfileSetup(false);
           }
         } catch (err: any) {
           console.error("Profil yüklenirken hata:", err);
@@ -198,6 +202,7 @@ export const useAuth = () => {
     profile,
     loading,
     error,
+    needsProfileSetup,
     accountType: profile?.type,
     loginWithEmail,
     registerWithEmail,

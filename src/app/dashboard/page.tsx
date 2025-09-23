@@ -9,16 +9,21 @@ import NeonButton from '@/components/ui/NeonButton';
 import Loading from '@/components/ui/Loading';
 
 export default function DashboardPage() {
-  const { user, profile, accountType, loading, logout } = useAuth();
+  const { user, profile, accountType, loading, logout, needsProfileSetup } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    console.log('Dashboard useEffect triggered, user:', user, 'loading:', loading);
+    console.log('Dashboard useEffect triggered, user:', user, 'loading:', loading, 'needsProfileSetup:', needsProfileSetup);
     if (!loading && !user) {
       console.log('User not authenticated, redirecting to home');
       router.push('/');
     }
-  }, [user, loading, router]);
+    // Kullanıcı profili yoksa profil oluşturma sayfasına yönlendir
+    if (!loading && user && needsProfileSetup) {
+      console.log('User needs profile setup, redirecting to profile creation');
+      router.push('/auth/setup-profile');
+    }
+  }, [user, loading, needsProfileSetup, router]);
 
   const handleLogout = async () => {
     try {
