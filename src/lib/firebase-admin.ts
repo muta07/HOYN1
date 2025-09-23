@@ -5,9 +5,11 @@ import * as admin from 'firebase-admin';
 // Projenin zaten başlatılıp başlatılmadığını kontrol et
 if (!admin.apps.length) {
   try {
-    const serviceAccount = JSON.parse(
-      process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string
-    );
+    const serviceAccountJson = Buffer.from(
+      process.env.FIREBASE_SERVICE_ACCOUNT_KEY as string,
+      'base64'
+    ).toString('utf-8');
+    const serviceAccount = JSON.parse(serviceAccountJson);
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
       // Eğer Realtime Database kullanıyorsanız, databaseURL'i buraya ekleyin
